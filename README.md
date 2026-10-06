@@ -3,10 +3,17 @@
 A desktop-first wedding application for one wedding, with a planning target of
 1,000 unique guests and 1,000 events. Guest flows must also work on mobile.
 
-This repository currently contains a minimal Next.js App Router scaffold and six
-design documents. The home page is neutral until the approved Stitch designs are
-provided. Authentication, database access, and external-service integrations are
-not implemented.
+This repository contains a minimal Next.js App Router application and six design
+documents. The homepage at `/` implements the complete approved Stitch layout:
+hero, story, celebrations, invitation access, gallery sharing, livestream preview,
+venue, and footer. It includes mobile navigation, event-detail dialogs, local
+artwork, and self-hosted fonts. Names, dates, venue, and album counts are sample
+content. Service-dependent actions and staff sign in remain disabled.
+Authentication, database access, and external-service integrations are not
+implemented.
+
+The homepage components live in `src/features/wedding/components/`. Asset sources
+and next UI steps are recorded in [the design reference](docs/Homepage-Design.md).
 
 ## Local development
 
@@ -101,7 +108,6 @@ Create the following folders only when implementing their first real files:
 | `src/server/jobs/`                            | Background entry points calling feature services               |
 | `scripts/`                                    | Explicit migrations and controlled admin initialization        |
 | `tests/`                                      | Integration and browser tests                                  |
-| `public/`                                     | Public brand assets and fonts; never private wedding uploads   |
 
 HTTP handlers validate transport inputs and call services. Server-rendered staff
 pages may call the same services directly. Both paths enforce authorization.

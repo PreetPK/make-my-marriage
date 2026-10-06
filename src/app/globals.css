@@ -1,11 +1,31 @@
 @import "tailwindcss";
 
-/* Neutral scaffold colors; replace with the approved Stitch design tokens. */
 @theme {
-  --color-background: #fafaf9;
-  --color-foreground: #1c1917;
-  --color-muted: #57534e;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-background: #fef8f5;
+  --color-foreground: #1d1b19;
+  --color-muted: #4f4447;
+  --color-primary: #301621;
+  --color-wine: #482b36;
+  --color-secondary: #705a45;
+  --color-bronze: #99816a;
+  --color-linen: #f7f3eb;
+  --color-panel: #f3ede9;
+  --color-panel-light: #f8f2ef;
+}
+
+@layer components {
+  .section-eyebrow {
+    @apply text-[11px] font-semibold tracking-[0.25em] text-secondary uppercase;
+  }
+
+  .section-title {
+    @apply font-serif text-[32px] leading-10 tracking-tight text-primary md:text-[48px] md:leading-14;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), Arial, Helvetica, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
 }
 
 @layer base {
@@ -13,10 +33,16 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 
   :focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 4px;
+  }
+
+  ::selection {
+    background: #f8dbc0;
+    color: var(--color-primary);
   }
 }
