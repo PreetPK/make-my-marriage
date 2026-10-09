@@ -36,12 +36,10 @@ export function WeddingHeader() {
         </nav>
         <div className="flex items-center gap-4">
           <WeddingMobileMenu />
-          <button
-            type="button"
-            disabled
-            aria-label="Staff sign in — coming soon"
-            title="Staff sign in is coming soon"
-            className="flex size-8 shrink-0 cursor-not-allowed items-center justify-center rounded-full bg-primary text-white"
+          <Link
+            href="/login"
+            aria-label="Staff sign in"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-white hover:bg-wine"
           >
             <svg
               aria-hidden="true"
@@ -54,7 +52,7 @@ export function WeddingHeader() {
               <circle cx="12" cy="8" r="3" />
               <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
             </svg>
-          </button>
+          </Link>
         </div>
       </div>
     </header>

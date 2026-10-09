@@ -16,8 +16,9 @@ for the sticky header. Event details use native dialogs with keyboard dismissal
 and focus return. The album QR preview expands using a native disclosure control.
 The venue link opens a Google Maps search for the sample venue.
 
-Invitation access, gallery actions, staff sign in, and livestream playback remain
-disabled. QR illustrations are explicitly labeled not scannable, and the album
+Invitation access, gallery actions, and livestream playback remain disabled.
+The staff icon links to the [sign-in UI preview](Account-UI.md); authentication
+is not implemented. QR illustrations are explicitly labeled not scannable, and the album
 count is labeled as a sample. No guest information, real gallery photos, tokens, or
 invitation-specific data are exposed. No credentials or additional packages are
 needed to run the UI.

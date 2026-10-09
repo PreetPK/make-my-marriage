@@ -8,12 +8,18 @@ documents. The homepage at `/` implements the complete approved Stitch layout:
 hero, story, celebrations, invitation access, gallery sharing, livestream preview,
 venue, and footer. It includes mobile navigation, event-detail dialogs, local
 artwork, and self-hosted fonts. Names, dates, venue, and album counts are sample
-content. Service-dependent actions and staff sign in remain disabled.
-Authentication, database access, and external-service integrations are not
-implemented.
+content. Service-dependent homepage actions remain disabled. Staff sign-in links
+to staff sign-in.
+Staff sign-in, public admin signup, sign-out, and a
+protected workspace entry now have backend implementations using MongoDB and
+NextAuth. Signup creates active admins immediately; email verification is deferred.
+See [staff authentication setup](docs/Staff-Authentication.md). Recovery/reset,
+organizer management, and other provider features remain later work.
 
 The homepage components live in `src/features/wedding/components/`. Asset sources
 and next UI steps are recorded in [the design reference](docs/Homepage-Design.md).
+For completed work, remaining features, and recorded checks, see
+[project progress](docs/Project-Progress.md).
 
 ## Local development
 
@@ -39,6 +45,7 @@ production. `APP_ENV` is application configuration, not a replacement for Next.j
 
 | Command                | Purpose                                                    |
 | ---------------------- | ---------------------------------------------------------- |
+| `npm run db:check`     | Read-only MongoDB connectivity check                       |
 | `npm run dev`          | Start the development server                               |
 | `npm run lint`         | Run ESLint, rejecting warnings                             |
 | `npm run format`       | Format source and configuration                            |
@@ -77,11 +84,11 @@ included by the current Next.js config do not yet declare ESLint 10 support.
 Keep this compatible pin until those plugins support ESLint 10; do not force a
 peer-dependency override. This is a development-tooling limitation.
 
-Provider SDKs, database access, authentication, image processing, and test
-frameworks are deferred until their corresponding features are implemented.
-The official MongoDB driver is the recommended persistence library. Auth.js
-release status and credentials/session compatibility must be verified before
-authentication is implemented; neither v4 nor a v5 beta is selected here.
+Other provider SDKs, authentication, image processing, and test frameworks are
+deferred until their corresponding features are implemented.
+MongoDB driver 7.7.0 was verified and installed on 8 October 2026 for Node 24. Stable next-auth 4.24.15 was verified for Next.js 16/React 19 and selected with
+credentials/JWT sessions. Development runner tsx 4.23.15 supports account scripts
+and tests. Resend is deferred until an email feature is implemented.
 
 ## Source boundaries
 
@@ -89,25 +96,23 @@ The root layout owns only the HTML document, global styles, and basic metadata.
 The future staff layout owns dashboard navigation and other staff UI. Route
 groups organize pages; they do not enforce authorization.
 
-Create the following folders only when implementing their first real files:
+Account UI/business logic/repositories now live in src/features/accounts;
+shared authentication and database connections live in src/server. The staff layout
+always checks access dynamically. Create these remaining folders only when their
+first working feature arrives:
 
-| Future location                               | Responsibility                                                 |
-| --------------------------------------------- | -------------------------------------------------------------- |
-| `src/app/(auth)/`                             | Login, invitation-only signup, verification, password recovery |
-| `src/app/(staff)/`                            | Protected management pages and dashboard layout                |
-| `src/app/(guest)/`                            | Shared wedding, personal invitation, and gallery pages         |
-| `src/app/api/`                                | HTTP handlers added alongside working features                 |
-| `src/components/`                             | Shared presentation components                                 |
-| `src/features/<feature>/schemas.ts`           | Browser-safe validation schemas and types                      |
-| `src/features/<feature>/components/`          | Feature-specific UI                                            |
-| `src/features/<feature>/server/service.ts`    | Business rules and permission enforcement                      |
-| `src/features/<feature>/server/repository.ts` | Feature-specific database queries                              |
-| `src/server/db/`                              | Shared MongoDB connection                                      |
-| `src/server/auth/`                            | Auth.js integration and shared authorization helpers           |
-| `src/server/integrations/`                    | R2, Resend, and Inngest clients                                |
-| `src/server/jobs/`                            | Background entry points calling feature services               |
-| `scripts/`                                    | Explicit migrations and controlled admin initialization        |
-| `tests/`                                      | Integration and browser tests                                  |
+| Future location                               | Responsibility                                         |
+| --------------------------------------------- | ------------------------------------------------------ |
+| `src/app/(guest)/`                            | Shared wedding, personal invitation, and gallery pages |
+| `src/app/api/`                                | HTTP handlers added alongside working features         |
+| `src/components/`                             | Shared presentation components                         |
+| `src/features/<feature>/schemas.ts`           | Browser-safe validation schemas and types              |
+| `src/features/<feature>/components/`          | Feature-specific UI                                    |
+| `src/features/<feature>/server/service.ts`    | Business rules and permission enforcement              |
+| `src/features/<feature>/server/repository.ts` | Feature-specific database queries                      |
+| `src/server/integrations/`                    | R2, Resend, and Inngest clients                        |
+| `src/server/jobs/`                            | Background entry points calling feature services       |
+| `tests/`                                      | Integration and browser tests                          |
 
 HTTP handlers validate transport inputs and call services. Server-rendered staff
 pages may call the same services directly. Both paths enforce authorization.
@@ -126,7 +131,7 @@ rather than assuming server-rendered pages receive guest credentials.
 
 ## Configuration and secrets
 
-Validate configuration with Zod on the server. Only basic app settings exist now;
+Validate configuration with Zod on the server. App and lazy MongoDB settings exist;
 require each provider's settings when its feature is implemented. Do not add dummy
 credentials to make builds pass. Local, preview, and production environments must
 use isolated data and provider configuration, with restricted test email delivery.
@@ -164,3 +169,39 @@ stream count, token/session durations, upload settings, rate-limit backing store
 production capacity, regions, retention, and backup operations. Examples in the
 documents do not approve these defaults. The scaffold creates no services, staff
 accounts, wedding data, or placeholder API implementations.
+
+## MongoDB development connection
+
+Use the existing Atlas development cluster. Put `MONGODB_URI` and
+`MONGODB_DATABASE` in the ignored `.env.local` file, using the Atlas database
+user credentials and the intended development database name. Atlas login
+credentials are different from database credentials. Percent-encode special
+characters in the connection password, and allow your current development IP in
+Atlas Network Access. Use a database user limited to the development database;
+do not connect this work to production data. Do not share credentials in chat.
+
+Run `npm run db:check` with Node 24 from the repository root. It loads `.env.local`,
+connects, runs a read-only ping, then closes the pool. A successful ping verifies
+connectivity and authentication, not collection write permissions, validators,
+indexes, signup, or UI persistence. Errors deliberately omit connection details.
+
+The shared server-only module is `src/server/db/mongodb.ts`. Future feature
+repositories call `getDatabase()`; they must enforce their own authorization and
+validate persisted data. The pool is reused per process, failed connections may
+retry, and no connection opens during imports or credential-free builds. Restart
+the app after changing database configuration. `scripts/` currently contains the
+connection check; migrations and controlled admin initialization come later.
+
+Account backend behavior and configuration are documented in
+[staff authentication](docs/Staff-Authentication.md).
+
+Account commands: npm test runs password/policy and mocked signup/login tests; npm run test:integration
+runs explicitly selected temporary-database tests; npm run accounts:setup performs
+storage initialization only; it does not create users or send email. Read the authentication
+setup guide before running either database-writing command.
+
+Account scope changed on 9 October 2026: every new public signup receives admin
+immediate access to the single wedding. Invitations and the
+two-partner admin cap in older specifications are superseded. Signup fields work
+without email settings; email verification and Resend are deferred.
+Wedding names, date, time zone, and currency are configured later.

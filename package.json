@@ -15,10 +15,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run build"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run build",
+    "db:check": "node --conditions=react-server --env-file-if-exists=.env.local scripts/check-database.mjs",
+    "accounts:setup": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/setup-accounts.ts",
+    "test": "node --conditions=react-server --import tsx --test tests/accounts.test.ts tests/accounts-flow.test.ts",
+    "test:integration": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx --test tests/accounts.integration.test.mjs"
   },
   "dependencies": {
+    "mongodb": "7.7.0",
     "next": "16.3.8",
+    "next-auth": "4.24.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1",
@@ -35,6 +41,7 @@
     "postcss": "8.5.28",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
     "typescript": "6.0.3"
   },
   "allowScripts": {
