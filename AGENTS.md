@@ -20,6 +20,9 @@
   is deferred; do not require it or mark unverified addresses as verified.
   Invitations, preauthorized partner emails, and the two-admin cap are superseded.
   See [staff authentication](docs/Staff-Authentication.md) for the active implementation.
+- Wedding onboarding configures the singleton once and is shared by all admins.
+  Keep server authorization and revision checks on saves; setup completion does
+  not publish the guest website. See [onboarding implementation](docs/wedding-onboarding/Implementation.md).
 - Explicit user decisions take precedence over older documents. Proposed defaults
   and examples are not approval. Check for the referenced PRD v1.4 and architecture
   v1.1 before revising the older copies; see README for known discrepancies.

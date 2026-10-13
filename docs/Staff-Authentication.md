@@ -26,11 +26,23 @@ use JWT sessions and application-owned persistence. Passwords have 15–128 Unic
 code points, without forced symbols or trimming, and use asynchronous salted scrypt.
 Sessions expire after 12 hours. Protected operations reload active membership,
 current role, and session version; revocation still blocks access immediately.
-Client session updates cannot grant permissions.
+Client session updates cannot grant permissions. Signed-in visitors to /login or
+/signup are redirected to /dashboard after server-side session validation;
+anonymous or invalidated sessions can still access the forms. Admins with incomplete
+shared wedding setup are then routed from the dashboard to onboarding; completed
+setup is reused by every admin. See [onboarding implementation](wedding-onboarding/Implementation.md). Login and logout
+replace the current history entry using a fresh document. Auth/staff layouts hide
+cached snapshots and reload Back/Forward restores through the server session
+checks. Public homepage navigation remains available. Logout failures show an
+error instead of presenting a successful sign-out.
 
-Signup requires same-origin JSON POST, with an 8 KiB streamed body limit. Auth.js
+Signup requires same-origin JSON POST. Authentication mutations also require the
+configured origin and JSON or form-encoded bodies. Both streams are capped at
+8 KiB, and malformed requests are rejected before account operations. Auth.js
 retains native login/logout CSRF protection. MongoDB counters limit signup/login
-to 10/email and 120/application per 15 minutes.
+to 10/email and 120/application per 15 minutes; signup throttling returns 429 with
+a Retry-After hint. API responses are not cached. Basic frame, MIME, and referrer
+headers are configured in next.config.ts.
 
 ## Storage and checks
 
@@ -40,8 +52,10 @@ preserved. Existing pending-verification records are not automatically activated
 No verification routes, tokens, emails, or provider client are used by this flow.
 
 npm run accounts:setup initializes storage only; it creates no users and sends no
-emails. npm test covers password policy and a mocked signup/login flow without
-email settings. The mock does not demonstrate Atlas write permissions or indexes.
+emails. npm test covers password policy, a mocked signup/login flow without email settings,
+and both auth pages with controlled valid, anonymous, invalidated, and unconfigured
+sessions. Page tests execute the page functions and real Next.js redirects while
+mocking the validated Auth.js session; they do not exercise browser cookies.
 
 npm run test:integration is opt-in, requires an explicitly selected temporary
 database named mmm_account_test_*, refuses nonempty databases, and removes only
@@ -50,6 +64,11 @@ and immediate-login integration test passed against an isolated Atlas database
 on 9 October 2026; cleanup was separately confirmed. Details are recorded in
 [project progress](Project-Progress.md). This is backend service/callback testing,
 not a complete browser authentication journey.
+
+The production-server HTTP/security suite and a real browser account journey
+also passed against isolated Atlas test data. See
+[authentication test coverage](Authentication-Test-Coverage.md) for scenarios,
+commands, cleanup, known tooling findings, and release limitations.
 
 ## Deferred work
 

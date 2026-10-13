@@ -12,6 +12,7 @@ export function digestToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 export class AccountInputError extends Error {}
+export class AccountRateLimitError extends AccountInputError {}
 export async function signupAdmin(input: unknown) {
   const values = signupFormSchema.safeParse(input);
   if (!values.success)
@@ -27,7 +28,9 @@ export async function signupAdmin(input: unknown) {
       15 * 60_000,
     ))
   )
-    throw new AccountInputError("Too many attempts. Please try again later.");
+    throw new AccountRateLimitError(
+      "Too many attempts. Please try again later.",
+    );
   const { database, users } = await accountCollections();
   if (await users.findOne({ emailNormalized }))
     throw new AccountInputError(

@@ -1,6 +1,8 @@
 # Make My Marriage — project progress
 
-Last updated: **9 October 2026**.
+Last updated: **12 October 2026**.
+Latest application validation: **12 October 2026** — complete wedding onboarding and
+17 local regressions, live HTTP/security checks and a browser journey.
 
 This is the project-wide record of completed work and remaining features. The
 specifications describe requirements; this file records what actually exists.
@@ -9,16 +11,29 @@ Read [README](../README.md) for setup and
 
 ## Current position
 
-The scaffold is complete, and the full homepage UI is implemented using the
-approved Stitch design. The app runs locally without external-service credentials.
-Staff sign-in, public admin signup, sign-out, and a protected
-workspace entry now have backend implementations. Real account setup awaits
-MongoDB and authentication configuration; email verification is deferred.
-It is a UI preview with sample wedding content, not a working wedding-management
-system. A server-only MongoDB connection layer and read-only check are available; live
-Atlas connection and read-only ping passed on 8 October 2026. Wedding/guest UI persistence,
-guest access, and other provider integrations have not been implemented. Production readiness and the 1,000-guest / 1,000-event
-planning target have not been validated.
+The scaffold and approved Stitch homepage UI are implemented. The homepage uses
+sample wedding content; wedding management and guest features are not yet working.
+Public signup creates active admins of the single wedding, with immediate login,
+sign-out, server-protected dashboard entry, and authenticated account-page
+redirects. Email verification is deferred. Browser Back/Forward restores now
+recheck access; logged-out visitors cannot reopen dashboard content.
+
+MongoDB Atlas connectivity, isolated account persistence, HTTP security checks,
+and real browser authentication journeys have passed. Seventeen local regressions
+and the development checks passed on 12 October; security coverage is recorded in
+[authentication test coverage](Authentication-Test-Coverage.md) for scenarios and
+limits. Public pages and builds remain available without service credentials;
+working signup/login require MongoDB and authentication configuration.
+
+The complete three-step onboarding flow saves couple details, explicit time zone/
+currency, and optional venue to the shared wedding in MongoDB. Admins resume saved
+progress, finish setup once, and then reach a dashboard showing saved details.
+Stale revisions cannot overwrite another admin’s changes. The homepage still uses
+sample content; website editing, guest access, and other integrations remain future
+work. See [onboarding implementation](wedding-onboarding/Implementation.md).
+Production readiness and the 1,000-guest / 1,000-event target are unvalidated.
+The latest authentication fixes and complete onboarding are still local, uncommitted,
+and unpushed.
 
 Statuses used below:
 
@@ -29,15 +44,15 @@ Statuses used below:
 
 ## Foundation and design
 
-| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                  |
-| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                |
-| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                       |
-| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Account policy and isolated Atlas lifecycle tests now exist.      |
-| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below. |
-| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                               |
-| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                |
-| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; invited signup uses the same visual language. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.                                                     |
+| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                                                                                                                               |
+| ------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                                                                                                                             |
+| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                                                                                                                                    |
+| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Seventeen local regressions pass, including onboarding calendar/name validation. Prior isolated Atlas lifecycle, HTTP security and browser authentication checks are recorded. |
+| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below.                                                                                                              |
+| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                                                                                                                                            |
+| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                                                                                                                             |
+| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; public admin signup uses the same visual language. Onboarding desktop/mobile direction accepted; all three steps and saving/error states implemented. Full management dashboards remain future work. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.           |
 
 ## Homepage coverage
 
@@ -66,32 +81,32 @@ must also follow the [architecture](Make-My-Marriage-System-Architecture.md),
 [database design](Make-My-Marriage-Database-Design.md), and
 [API design](Make-My-Marriage-API-Design.md).
 
-| Feature                          | Requirement                  | Status      | Remaining scope                                                                                                                                                                           |
-| -------------------------------- | ---------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Staff accounts and authorization | REQ-01 (scope updated 9 Oct) | Partial     | Public signup immediately creates active admins; sign-in/out, protected entry, and storage initialization exist. Email verification/Resend, recovery/reset, and production checks remain. |
-| Shared and personal guest access | REQ-02                       | Not started | Server-validated wedding, invitation, and gallery links, revocation/replacement, and scoped access.                                                                                       |
-| Wedding setup and website        | REQ-03                       | UI only     | Admin-managed wedding settings, real content, persistence, and guest website access.                                                                                                      |
-| Event management                 | REQ-04                       | UI only     | Staff event CRUD, guest assignments, admin-only general publication, and agreed cancellation behavior. Homepage cards are sample UI only.                                                 |
-| Guests and digital invitations   | REQ-05                       | Not started | Individual guest records, event assignments, personal links, controlled invitation sends, and delivery results.                                                                           |
-| Event-level RSVP                 | REQ-06                       | Not started | Authorized responses, statuses, staff corrections, and confirmed deadline behavior.                                                                                                       |
-| Email reminders                  | REQ-07                       | Not started | Manual and scheduled reminders, eligibility, retries, and truthful delivery history.                                                                                                      |
-| Staff dashboards                 | REQ-08                       | Not started | Admin/organizer layouts, counts, filters, and authorized data.                                                                                                                            |
-| Expenses                         | REQ-09                       | Not started | Expense records, categories, payment state, and approved totals/model.                                                                                                                    |
-| Organizer management             | REQ-10 (original scope)      | Not started | Invitation-only organizer roles are superseded for new signups; all new accounts are admins. Future staff-management scope needs discussion with that feature.                            |
-| Planner discovery                | REQ-11                       | Not started | Sample planner directory; real planner API integration remains outside initial scope.                                                                                                     |
-| Photo galleries and QR sharing   | REQ-12                       | UI only     | Authorized albums, R2 uploads, image processing, original downloads, real link-based QR codes, and admin-only deletion.                                                                   |
-| YouTube livestream               | REQ-13                       | UI only     | Admin configuration and guest playback under the confirmed access rules.                                                                                                                  |
+| Feature                          | Requirement                  | Status      | Remaining scope                                                                                                                                                                              |
+| -------------------------------- | ---------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Staff accounts and authorization | REQ-01 (scope updated 9 Oct) | Partial     | Public admin signup, sign-in/out, server-protected entry, signed-in account redirects, and Back/Forward checks pass. Verification/Resend, recovery/reset, and production preparation remain. |
+| Shared and personal guest access | REQ-02                       | Not started | Server-validated wedding, invitation, and gallery links, revocation/replacement, and scoped access.                                                                                          |
+| Wedding setup and website        | REQ-03                       | Partial     | Shared three-step onboarding, persistence, saved-step resume and completion routing work. Completed-wedding editing, story/photos, homepage connection and guest website access remain.      |
+| Event management                 | REQ-04                       | UI only     | Staff event CRUD, guest assignments, admin-only general publication, and agreed cancellation behavior. Homepage cards are sample UI only.                                                    |
+| Guests and digital invitations   | REQ-05                       | Not started | Individual guest records, event assignments, personal links, controlled invitation sends, and delivery results.                                                                              |
+| Event-level RSVP                 | REQ-06                       | Not started | Authorized responses, statuses, staff corrections, and confirmed deadline behavior.                                                                                                          |
+| Email reminders                  | REQ-07                       | Not started | Manual and scheduled reminders, eligibility, retries, and truthful delivery history.                                                                                                         |
+| Staff dashboards                 | REQ-08                       | Partial     | Protected welcome, saved wedding summary and sign-out exist. Full management dashboard UI, counts, filters and feature data remain.                                                          |
+| Expenses                         | REQ-09                       | Not started | Expense records, categories, payment state, and approved totals/model.                                                                                                                       |
+| Organizer management             | REQ-10 (original scope)      | Not started | Invitation-only organizer roles are superseded for new signups; all new accounts are admins. Future staff-management scope needs discussion with that feature.                               |
+| Planner discovery                | REQ-11                       | Not started | Sample planner directory; real planner API integration remains outside initial scope.                                                                                                        |
+| Photo galleries and QR sharing   | REQ-12                       | UI only     | Authorized albums, R2 uploads, image processing, original downloads, real link-based QR codes, and admin-only deletion.                                                                      |
+| YouTube livestream               | REQ-13                       | UI only     | Admin configuration and guest playback under the confirmed access rules.                                                                                                                     |
 
 ## Infrastructure and release work
 
-| Area                         | Status      | Remaining scope                                                                                                                                                                                                        |
-| ---------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MongoDB Atlas                | Partial     | Official driver 7.7.0, lazy reusable server-only connection, and read-only ping command added. Live Atlas connection and read-only ping passed. Feature repositories, indexes, migrations, and data validation remain. |
-| Resend                       | Not started | Deferred with email verification; no current provider client or dependency. Domain, sender, delivery, and durable jobs remain.                                                                                         |
-| Cloudflare R2                | Not started | Private storage, authorized transfers, image processing, and retention/deletion workflows.                                                                                                                             |
-| Inngest                      | Not started | Job entry points, background processing, scheduled reminders, and retries.                                                                                                                                             |
-| Feature and security testing | Partial     | Account policy tests and isolated live Atlas lifecycle tests pass. Other feature tests, production abuse controls, delivery, and capacity testing remain.                                                              |
-| Operations and deployment    | Not started | Environment separation, backups, observability, provider capacity checks, Vercel deployment, and release acceptance checks.                                                                                            |
+| Area                         | Status      | Remaining scope                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MongoDB Atlas                | Partial     | Official driver 7.7.0, lazy reusable server-only connection, and read-only ping command added. Live Atlas connection and read-only ping passed. Account and onboarding repositories, validators and indexes are implemented; isolated persistence/concurrency tests pass. Other feature storage remains. |
+| Resend                       | Not started | Deferred with email verification; no current provider client or dependency. Domain, sender, delivery, and durable jobs remain.                                                                                                                                                                           |
+| Cloudflare R2                | Not started | Private storage, authorized transfers, image processing, and retention/deletion workflows.                                                                                                                                                                                                               |
+| Inngest                      | Not started | Job entry points, background processing, scheduled reminders, and retries.                                                                                                                                                                                                                               |
+| Feature and security testing | Partial     | Seventeen local regressions and onboarding UI/access checks pass. Prior isolated Atlas lifecycle/HTTP security and browser auth/history checks are recorded. Other feature tests, production abuse controls, delivery, and capacity remain.                                                              |
+| Operations and deployment    | Not started | Environment separation, backups, observability, provider capacity checks, Vercel deployment, and release acceptance checks.                                                                                                                                                                              |
 
 ## Verification recorded so far
 
@@ -130,12 +145,19 @@ when this tracker was created:
 - General event publication is admin-only under the PRD; the proposed API's
   organizer permission conflicts with that rule and must be resolved.
 - Auth.js stable 4.24.15 release and credentials/JWT compatibility were verified
-  and selected. MongoDB driver 7.7.0 is now installed; live connectivity has passed, while UI persistence
-  still needs implementation and verification.
+  and selected. MongoDB driver 7.7.0 is installed; live connectivity and account
+  persistence are verified. Wedding/guest persistence remains future work.
 - Product and service defaults still marked proposed remain open. Resolve them
   when implementing the relevant feature; see README and the source documents.
 - Real wedding copy, dates, images, and venue details are still needed. Sample
   content and disabled actions do not count as completed product behavior.
+
+## Next feature boundary
+
+Core onboarding is complete. The next feature should cover completed-wedding
+settings and website content, including safe editing rules and the guest website
+access/publication boundary, before replacing homepage sample content. Its exact
+scope still needs discussion; see [onboarding implementation](wedding-onboarding/Implementation.md).
 
 ## Milestone history
 
@@ -246,6 +268,155 @@ confirmed no collections remained. Application data was untouched; no real accou
 or email messages were created. Earlier pending-approval notes above are historical;
 the current live account test is now validated. This tests backend services and
 Auth.js callbacks against Atlas, not a full browser signup/login/logout journey.
+
+## Signed-in account page redirects — 9 October 2026
+
+Fixed the missed scenario where a signed-in visitor could still open /login or
+/signup. Both pages now check the validated session on the server and redirect
+active staff to /dashboard; anonymous and invalidated sessions retain access to
+the forms. Credential-free rendering remains available. Added a regression test
+that executes both page functions using controlled Auth.js session results and
+checks the actual Next.js redirect, anonymous/invalidated behavior, and missing
+configuration. This does not replace a full browser login/logout journey.
+
+All five local tests, lint, formatting, TypeScript, and the Webpack build passed.
+Stale generated development route types referencing the removed verification
+page were cleared before regenerating the successful build. No database writes
+were needed. Changes have not been committed or pushed.
+
+## Authentication security and browser checks — 9 October 2026
+
+Completed the real browser signup/login/refresh/logout journey with fictional
+accounts, including signed-in login/signup redirects, a second tab, revoked
+sessions, and rejected re-login. Added an opt-in production-server HTTP suite
+covering CSRF, cookies, session invalidation, client claims, injection attempts,
+request sizes, rate limits, redirects, database outages, and missing configuration.
+See [authentication test coverage](Authentication-Test-Coverage.md) for exact
+scenarios and limits; this is not a claim of complete production security.
+
+Fixed signup throttling returning 400 instead of 429, bounded Auth.js mutation
+bodies at 8 KiB, required their configured origin/content type, and made malformed
+JSON return 400. Stream errors are sanitized. Added no-store API responses and
+basic MIME/frame/referrer headers. Existing Auth.js CSRF protection remains.
+
+Seven local regressions, lint, formatting, TypeScript, and Webpack builds passed.
+The final HTTP/security suite passed; HTTPS cookie flags were checked through
+configuration, without a deployed TLS environment. Three isolated databases
+were deleted; a separate read-only cleanup check is recorded with the final run.
+No application data, local credentials, or real email delivery were changed.
+Production npm audit is clean; the full audit retains five development-tooling
+findings from unpatched braces. No incompatible downgrade or unverified patch
+was installed. Changes remain uncommitted and unpushed.
+
+## Authentication browser history — 9 October 2026
+
+Fixed the missed Back/Forward scenario. Login and logout now replace their current
+history entry with a fresh document. Account and staff layouts hide their content
+before history snapshots and reload restored entries through server authorization.
+Back remains usable for public navigation. Failed logout reports an error.
+
+The in-app Chromium browser passed signup/login → Back/Forward, direct signed-in
+login/signup redirects, and logout → Back/Forward through older dashboard entries.
+Anonymous direct dashboard access also returned to login. Ten local regressions,
+lint, formatting, TypeScript, and the Webpack production build passed. The full
+HTTP suite passed during investigation; the final build used a browser-only
+fixture. Two isolated history databases were deleted and their cleanup separately
+confirmed. No application data or credentials were changed. See
+[authentication test coverage](Authentication-Test-Coverage.md) for limits.
+Changes remain uncommitted and unpushed.
+
+## Wedding onboarding design draft — 12 October 2026
+
+Created the first onboarding desktop screen in the existing Stitch project,
+matching the approved homepage/account palette and fonts. Refined the draft
+into an open two-column welcome/form composition. It contains required couple
+names, an optional date with an undecided option, a three-step indicator, and
+shared-wedding guidance. Saved the [design brief and preview](wedding-onboarding/DESIGN.md).
+
+This is a proposed visual design awaiting user review, not a working feature.
+Settings/venue steps, mobile layouts, and validation states remain. Screenshots
+were visually inspected; documentation formatting and links checked. No application
+code, authentication behavior, dependencies, database data or deployment changed.
+
+## Wedding onboarding settings and venue drafts — 12 October 2026
+
+The user approved the Couple details design. Created matching desktop drafts for
+Wedding settings (required, initially unselected time zone/currency) and Venue
+(optional name/address and undecided option). The final action is Finish setup;
+the design explicitly separates setup completion from guest website publication.
+Saved the screen references and previews in the
+[onboarding design brief](wedding-onboarding/DESIGN.md).
+
+Steps 2–3 await visual review; mobile and validation/loading states remain.
+Visually inspected both exported screenshots and checked documentation formatting
+and links. Application implementation, onboarding redirects, persistence and
+functional tests have not started. No application code, dependencies, database
+data or deployment changed.
+
+## Wedding onboarding mobile and state drafts — 12 October 2026
+
+The user approved the settings/venue desktop screens. Generated matching mobile
+drafts for all three steps and four interaction references: couple-detail errors
+(including an invalid provided date), missing time zone/currency, saving, and
+save failure with preserved entries and retry. Standardized headers, progress,
+and footers; removed invented policy/support links and corrected a duplicate header.
+Saved all seven previews and screen references in the
+[onboarding design brief](wedding-onboarding/DESIGN.md).
+
+Mobile and interaction-state designs await user review. Visually inspected the
+screenshots and checked documentation formatting/local links. No browser
+responsive, keyboard, contrast, validation, or persistence tests were performed.
+Application implementation remains unstarted; no application code, dependencies,
+authentication behavior, database records, or deployment changed.
+
+## Wedding onboarding Step 1 UI — 12 October 2026
+
+Implemented an admin-only /onboarding preview matching the approved design, with
+its own minimal setup shell and a dashboard entry link. Required couple names,
+optional calendar date, undecided-date toggle, inline errors, and first-error
+focus work. Continue validates only and explicitly reports that details are not
+saved; no onboarding completion or automatic setup redirects were added.
+
+Seventeen local regressions, lint, formatting, TypeScript and the Webpack production
+build passed. In-app Chromium checks covered date/name validation, retained input,
+editing/focus, keyboard order, desktop and 320px/390px layouts, and anonymous/
+organizer denial. Onboarding logout plus Back/Forward/direct requests denied access.
+Confirmed the fictional wedding details were not saved. The disposable browser
+fixture was removed and cleanup independently verified. No application data,
+local secrets, email delivery, or dependencies changed.
+
+See [implementation status](wedding-onboarding/Implementation.md) for exact checks
+and limits. Wedding settings/venue UI, persistence, resume, concurrent edits and
+setup completion remain next parts. Latest changes are uncommitted and unpushed.
+
+## Complete wedding onboarding — 12 October 2026
+
+Completed the approved three-step UI and backend: explicit time zone/currency,
+optional venue, per-step MongoDB saves, refresh resume, draft retention on Back,
+loading/error/retry states, and shared setup completion. Server-derived membership,
+admin authorization, strict bounded JSON and atomic revision checks prevent
+unauthorized or stale overwrites. The singleton is configured once; later admins
+skip setup and see the same saved details. Completion activates the workspace,
+records its completion time, and does not publish the guest website.
+
+All 17 local tests, lint, formatting, TypeScript and the Webpack build passed. The
+full authentication/security HTTP suite passed with live onboarding validation,
+organizer denial, concurrent saves/completion, minor-unit metadata, optional
+fields, resume, replay and database-validator checks. Browser tests covered the
+whole journey, stale-tab recovery, mobile layouts, saved-state refresh, completion
+history/redirects and a later admin. A controlled fixture-only storage rejection
+proved final-save failure retained inputs and made no partial write; retry then
+completed exactly once. Both disposable databases were removed and cleanup
+independently confirmed. Application data, secrets, dependencies and email delivery
+were unchanged. An initial long fixture name was rejected before any writes and
+replaced with a validated shorter name.
+
+See [implementation and test details](wedding-onboarding/Implementation.md).
+Added a final client-selection regression: server-supplied options remain valid
+without relying on browser ICU data; authoritative validation remains server-side.
+The final build, lint, type checks and all 17 local tests passed after that change.
+Completed-wedding editing, homepage connection, guest access/publication and other
+wedding-management features remain. Changes are uncommitted and unpushed.
 
 ## Keeping this record current
 

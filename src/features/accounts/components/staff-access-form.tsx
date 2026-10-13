@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { signupFormSchema, signInFormSchema } from "../schemas";
@@ -79,7 +78,6 @@ export function StaffAccessForm({
   mode: "login" | "signup";
   available?: boolean;
 }) {
-  const router = useRouter();
   const signup = mode === "signup";
   const enabled = signup || available;
   const ready = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
@@ -131,8 +129,9 @@ export function StaffAccessForm({
           callbackUrl: "/dashboard",
         });
         if (response?.ok && !response.error) {
-          router.push("/dashboard");
-          router.refresh();
+          // Authentication changed outside a server action. Replace this entry
+          // with a fresh document so history cannot reuse the pre-login route cache.
+          window.location.replace("/dashboard");
         } else
           setNotice(
             "Email or password is incorrect, or staff access is not active.",

@@ -3,16 +3,18 @@
 A desktop-first wedding application for one wedding, with a planning target of
 1,000 unique guests and 1,000 events. Guest flows must also work on mobile.
 
-This repository contains a minimal Next.js App Router application and six design
-documents. The homepage at `/` implements the complete approved Stitch layout:
+This repository contains one Next.js App Router application, six source
+specifications, and feature guides. The homepage at `/` implements the complete approved Stitch layout:
 hero, story, celebrations, invitation access, gallery sharing, livestream preview,
 venue, and footer. It includes mobile navigation, event-detail dialogs, local
 artwork, and self-hosted fonts. Names, dates, venue, and album counts are sample
-content. Service-dependent homepage actions remain disabled. Staff sign-in links
+content. Service-dependent homepage actions remain disabled. The header links
 to staff sign-in.
 Staff sign-in, public admin signup, sign-out, and a
 protected workspace entry now have backend implementations using MongoDB and
 NextAuth. Signup creates active admins immediately; email verification is deferred.
+The complete [wedding onboarding flow](docs/wedding-onboarding/Implementation.md)
+saves the shared wedding and routes admins to the dashboard when setup is complete.
 See [staff authentication setup](docs/Staff-Authentication.md). Recovery/reset,
 organizer management, and other provider features remain later work.
 
@@ -93,13 +95,16 @@ and tests. Resend is deferred until an email feature is implemented.
 ## Source boundaries
 
 The root layout owns only the HTML document, global styles, and basic metadata.
-The future staff layout owns dashboard navigation and other staff UI. Route
+The staff layout owns dashboard navigation and other staff UI. Route
 groups organize pages; they do not enforce authorization.
 
 Account UI/business logic/repositories now live in src/features/accounts;
 shared authentication and database connections live in src/server. The staff layout
-always checks access dynamically. Create these remaining folders only when their
-first working feature arrives:
+always checks access dynamically. The `/onboarding` admin flow has its own
+`(onboarding)` route group for the minimal setup screen, reuses the server access
+check and history guard, and keeps its UI/schema in src/features/wedding-onboarding.
+See [onboarding implementation](docs/wedding-onboarding/Implementation.md) for the
+current behavior, API, tests, and remaining scope. Create remaining folders when their first feature arrives:
 
 | Future location                               | Responsibility                                         |
 | --------------------------------------------- | ------------------------------------------------------ |
@@ -195,7 +200,7 @@ connection check; migrations and controlled admin initialization come later.
 Account backend behavior and configuration are documented in
 [staff authentication](docs/Staff-Authentication.md).
 
-Account commands: npm test runs password/policy and mocked signup/login tests; npm run test:integration
+Account commands: npm test runs local account, request-security, and onboarding-validation regression tests; npm run test:integration
 runs explicitly selected temporary-database tests; npm run accounts:setup performs
 storage initialization only; it does not create users or send email. Read the authentication
 setup guide before running either database-writing command.
@@ -205,3 +210,7 @@ immediate access to the single wedding. Invitations and the
 two-partner admin cap in older specifications are superseded. Signup fields work
 without email settings; email verification and Resend are deferred.
 Wedding names, date, time zone, and currency are configured later.
+
+Authentication security and browser coverage, optional npm run test:http setup,
+and remaining release checks are recorded in
+[authentication test coverage](docs/Authentication-Test-Coverage.md).
