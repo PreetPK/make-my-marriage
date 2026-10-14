@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { runEventChecks } from "./events.http.mjs";
+import { runPagePerformanceChecks } from "./page-performance.http.mjs";
+import { runWeddingSettingsChecks } from "./wedding-settings.http.mjs";
 import { runOnboardingChecks } from "./wedding-onboarding.http.mjs";
 import { randomBytes, createHash } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -158,7 +161,31 @@ function checkRedirect(response, path) {
 }
 try {
   await startServer(3107);
-  if (process.env.ACCOUNT_TEST_BROWSER_ONLY === "1") {
+  if (process.env.ACCOUNT_TEST_EVENTS_ONLY === "1") {
+    const jar = await runPagePerformanceChecks({
+      request,
+      signup,
+      login,
+      BrowserCookies,
+      db,
+      origin,
+      values,
+      skipMeasurements: true,
+    });
+    await runEventChecks({ request, jar, db, origin, checkRedirect });
+    if (process.env.ACCOUNT_TEST_BROWSER === "1") await waitForBrowser();
+  } else if (process.env.ACCOUNT_TEST_PERFORMANCE_ONLY === "1") {
+    await runPagePerformanceChecks({
+      request,
+      signup,
+      login,
+      BrowserCookies,
+      db,
+      origin,
+      values,
+    });
+    if (process.env.ACCOUNT_TEST_BROWSER === "1") await waitForBrowser();
+  } else if (process.env.ACCOUNT_TEST_BROWSER_ONLY === "1") {
     // This mode is a manual-browser fixture, not a passing automated HTTP suite.
     await waitForBrowser();
   } else {
@@ -318,6 +345,24 @@ try {
       checkRedirect,
       origin,
     });
+    await runWeddingSettingsChecks({ request, jar, db, origin, checkRedirect });
+    await runEventChecks({ request, jar, db, origin, checkRedirect });
+    const sessionToken = jar.values.get("next-auth.session-token");
+    assert(sessionToken);
+    assert.equal(
+      (
+        await request("/api/wedding/settings", {
+          headers: { authorization: "Bearer " + sessionToken },
+        })
+      ).status,
+      401,
+    );
+    checkRedirect(
+      await request("/dashboard", {
+        headers: { authorization: "Bearer " + sessionToken },
+      }),
+      "/login",
+    );
     const protectedPage = await request("/dashboard", { jar });
     assert.equal(protectedPage.status, 200);
     assert.match(protectedPage.headers.get("cache-control"), /no-store/);
@@ -392,16 +437,52 @@ try {
       }),
     );
     checkRedirect(await request("/dashboard", { jar: expired }), "/login");
+    for (const invalid of [forged, expired]) {
+      assert.equal(
+        (await request("/api/wedding/settings", { jar: invalid })).status,
+        401,
+      );
+      checkRedirect(
+        await request("/wedding-settings", { jar: invalid }),
+        "/login",
+      );
+    }
+    for (const [staffIssuedAt, maxAge] of [
+      [Date.now() + 60000, 12 * 3600],
+      [Date.now(), -60],
+    ]) {
+      const invalid = new BrowserCookies();
+      invalid.values.set(
+        "next-auth.session-token",
+        await encode({
+          secret,
+          token: {
+            sub: stored._id.toHexString(),
+            sessionVersion: 1,
+            staffIssuedAt,
+          },
+          maxAge,
+        }),
+      );
+      assert.equal(
+        (await request("/api/wedding/settings", { jar: invalid })).status,
+        401,
+      );
+      checkRedirect(await request("/dashboard", { jar: invalid }), "/login");
+    }
     await db
       .collection("users")
       .updateOne({ _id: stored._id }, { $inc: { sessionVersion: 1 } });
     checkRedirect(await request("/dashboard", { jar }), "/login");
     assert.equal((await request("/login", { jar })).status, 200);
+    assert.equal((await request("/api/wedding/settings", { jar })).status, 401);
     assert.equal((await login(jar)).status, 200);
     await db
       .collection("users")
       .updateOne({ _id: stored._id }, { $set: { status: "revoked" } });
     checkRedirect(await request("/dashboard", { jar }), "/login");
+    assert.equal((await request("/api/wedding/settings", { jar })).status, 401);
+    checkRedirect(await request("/wedding-settings", { jar }), "/login");
     assert.equal((await login(jar)).status, 401);
     console.log(
       "PASS forged, expired, stale-version, and revoked sessions fail closed",

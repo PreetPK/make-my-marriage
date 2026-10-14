@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { ObjectId, type Document, type UpdateFilter } from "mongodb";
 import { getDatabase } from "@/server/db/mongodb";
 
@@ -20,14 +21,15 @@ export type WeddingRecord = Document & {
     completedAt?: Date;
   };
 };
-export async function findWedding(weddingId: string) {
+// Request-local render snapshot; never a persistent authorization/data cache.
+export const findWedding = cache(async function readWedding(weddingId: string) {
   const db = await getDatabase();
   return db.collection<WeddingRecord>("weddings").findOne({
     _id: new ObjectId(weddingId),
     singletonKey: "primary",
     status: { $in: ["setup", "active"] },
   });
-}
+});
 const validator = {
   $jsonSchema: {
     bsonType: "object",
@@ -87,7 +89,7 @@ const validator = {
   },
 };
 let storage: Promise<void> | undefined;
-async function ensureStorage() {
+export async function ensureWeddingStorage() {
   storage ??= (async () => {
     const db = await getDatabase();
     const collection = await db.listCollections({ name: "weddings" }).next();
@@ -121,7 +123,7 @@ export async function updateWedding(
   expectedRevision: number,
   update: UpdateFilter<WeddingRecord>,
 ) {
-  await ensureStorage();
+  await ensureWeddingStorage();
   const db = await getDatabase();
   return db.collection<WeddingRecord>("weddings").findOneAndUpdate(
     {

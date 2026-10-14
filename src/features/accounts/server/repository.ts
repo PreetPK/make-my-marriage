@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import { findWedding } from "@/features/wedding-onboarding/server/repository";
 import { ObjectId } from "mongodb";
 import { getDatabase } from "@/server/db/mongodb";
 
@@ -27,10 +29,13 @@ export async function findStaffByEmail(emailNormalized: string) {
   const { users } = await accountCollections();
   return users.findOne({ emailNormalized });
 }
-export async function findActiveStaff(id: string, sessionVersion: number) {
+export const findActiveStaff = cache(async function readActiveStaff(
+  id: string,
+  sessionVersion: number,
+) {
   if (!ObjectId.isValid(id) || !Number.isSafeInteger(sessionVersion))
     return null;
-  const { users, database } = await accountCollections();
+  const { users } = await accountCollections();
   const user = await users.findOne({
     _id: new ObjectId(id),
     status: "active",
@@ -38,13 +43,9 @@ export async function findActiveStaff(id: string, sessionVersion: number) {
     role: { $in: ["admin", "organizer"] },
   });
   if (!user || !user.credential?.passwordHash) return null;
-  const wedding = await database.collection("weddings").findOne({
-    _id: user.weddingId,
-    singletonKey: "primary",
-    status: { $in: ["setup", "active"] },
-  });
+  const wedding = await findWedding(user.weddingId.toHexString());
   return wedding ? user : null;
-}
+});
 // Shared across processes; no per-instance in-memory login counter.
 export async function allowAccountAttempt(
   key: string,

@@ -15,6 +15,9 @@ protected workspace entry now have backend implementations using MongoDB and
 NextAuth. Signup creates active admins immediately; email verification is deferred.
 The complete [wedding onboarding flow](docs/wedding-onboarding/Implementation.md)
 saves the shared wedding and routes admins to the dashboard when setup is complete.
+The [event list, create and edit flows](docs/events/Implementation.md) save schedules and venues
+in MongoDB using the wedding time zone, with revision conflicts and retained save retries.
+Organizer invitations and guest assignments are next.
 See [staff authentication setup](docs/Staff-Authentication.md). Recovery/reset,
 organizer management, and other provider features remain later work.
 
@@ -214,3 +217,6 @@ Wedding names, date, time zone, and currency are configured later.
 Authentication security and browser coverage, optional npm run test:http setup,
 and remaining release checks are recorded in
 [authentication test coverage](docs/Authentication-Test-Coverage.md).
+
+Wedding details can be edited after setup at `/wedding-settings`. See
+[Wedding Settings](docs/Wedding-Settings.md) for the approved scope and lock rules.

@@ -23,6 +23,12 @@
 - Wedding onboarding configures the singleton once and is shared by all admins.
   Keep server authorization and revision checks on saves; setup completion does
   not publish the guest website. See [onboarding implementation](docs/wedding-onboarding/Implementation.md).
+- Completed-wedding settings are admin-only. Time zone locks once events exist;
+  currency locks once expenses exist. Future event/expense creation must coordinate
+  with wedding revisions to preserve these locks. See [Wedding Settings](docs/Wedding-Settings.md).
+- Event list/create/edit use the saved wedding time zone and idempotent request IDs.
+  Edits must check event revisions and preserve unrelated operational fields.
+  Preserve transaction coordination with Wedding Settings; see [event scope](docs/events/Implementation.md).
 - Explicit user decisions take precedence over older documents. Proposed defaults
   and examples are not approval. Check for the referenced PRD v1.4 and architecture
   v1.1 before revising the older copies; see README for known discrepancies.
@@ -39,6 +45,10 @@
 - Shared connections, authorization helpers, provider clients, and job entry points
   belong in `src/server/`. Import `server-only` in database, secret-bearing,
   authorization, and server-service modules; keep browser imports separate.
+- Avoid duplicate database reads within a server render: use request-scoped sharing
+  with primitive keys, never a persistent permissions cache. Authorize before
+  streaming protected UI; mutations must recheck access and revisions. Measure
+  complete responses as well as first byte; see [performance](docs/Performance.md).
 - Keep the root layout minimal. The future `(staff)` layout owns dashboard UI;
   `(auth)` owns staff account screens, and `(guest)` owns guest screens. Route
   groups do not enforce permissions.

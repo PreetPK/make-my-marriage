@@ -77,3 +77,13 @@ approved verification expiry (24 hours) and reset expiry (one hour) remain futur
 rules, not active behavior. Password recovery, staff management, email delivery
 jobs, production rate-limit tuning, deployment checks, and capacity testing remain.
 PRD v1.4 and architecture v1.1 were not found; older source documents are retained.
+
+## Protected-read optimization — 13 October 2026
+
+Protected pages/API requests validate the native encrypted Auth.js session cookie
+and shared absolute-lifetime policy, then read current active DB membership.
+Server Component callers share that lookup and the wedding read only within one
+render. Route handlers, mutations and later requests recheck current access.
+No persistent permissions cache or bearer login is introduced. Native Auth.js
+session/login/logout endpoints retain their normal callbacks. See
+[performance](Performance.md) for verification and measured results.

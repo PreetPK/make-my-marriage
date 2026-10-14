@@ -29,7 +29,7 @@ function checkStaff(staff: CurrentStaff, write = false) {
   )
     throw new OnboardingError("Admin access is required.", 403, "FORBIDDEN");
 }
-function stateOf(record: WeddingRecord): OnboardingState {
+export function weddingStateOf(record: WeddingRecord): OnboardingState {
   if (!Number.isSafeInteger(record.revision) || record.revision < 1)
     throw new Error("Wedding revision is unavailable.");
   const date =
@@ -83,7 +83,7 @@ export async function getOnboarding(staff: CurrentStaff) {
   checkStaff(staff);
   const record = await findWedding(staff.weddingId);
   if (!record) throw new Error("Wedding is unavailable.");
-  return stateOf(record);
+  return weddingStateOf(record);
 }
 export async function saveOnboarding(staff: CurrentStaff, input: unknown) {
   checkStaff(staff, true);
@@ -107,7 +107,7 @@ export async function saveOnboarding(staff: CurrentStaff, input: unknown) {
   const data = parsed.data;
   const record = await findWedding(staff.weddingId);
   if (!record) throw new Error("Wedding is unavailable.");
-  const state = stateOf(record);
+  const state = weddingStateOf(record);
   if (state.complete)
     throw new OnboardingError(
       "Wedding setup is already complete.",
@@ -194,5 +194,5 @@ export async function saveOnboarding(staff: CurrentStaff, input: unknown) {
       409,
       "SETUP_CHANGED",
     );
-  return stateOf(updated);
+  return weddingStateOf(updated);
 }

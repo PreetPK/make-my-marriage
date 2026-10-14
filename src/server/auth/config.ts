@@ -1,4 +1,5 @@
 import "server-only";
+import { isCurrentStaffToken } from "./token-policy";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createHash } from "node:crypto";
@@ -94,10 +95,7 @@ export function authOptions(): NextAuthOptions {
           token.staffIssuedAt = Date.now();
         }
         if (
-          typeof token.sub !== "string" ||
-          typeof token.sessionVersion !== "number" ||
-          typeof token.staffIssuedAt !== "number" ||
-          Date.now() - token.staffIssuedAt >= 12 * 60 * 60_000 ||
+          !isCurrentStaffToken(token) ||
           !(await findActiveStaff(token.sub, token.sessionVersion))
         )
           return {};

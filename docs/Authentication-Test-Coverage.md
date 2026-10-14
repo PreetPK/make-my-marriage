@@ -100,3 +100,36 @@ See [onboarding implementation](wedding-onboarding/Implementation.md) for exact
 scenarios, browser save-failure/retry checks and independently confirmed fixture
 cleanup. These tests do not change the production/deployment limits above.
 The dependency findings above were last checked on 9 October, not reaudited here.
+
+## Protected-read performance regression checks — 13 October 2026
+
+The optimized authorization path passed the full live HTTP suite, with extra checks
+for forged/absolute-expired tokens on settings, actual JWT expiry, future issue
+times, revoked/current session versions, and denial of bearer-only requests.
+Successive role changes in the same running server remain effective. The database
+outage regression found on the first run was fixed; the repeated full suite passed.
+Twenty-three local tests now include two shared token-policy regressions. See
+[performance](Performance.md) for request-scoped caching boundaries, measured
+timings and browser checks. These are not a complete security or capacity audit.
+
+## Events integration — 14 October 2026
+
+The full HTTP/security suite passed with event list/creation checks added. Anonymous
+event pages/API calls are denied; admins and organizers can read/create, while
+organizers remain denied Wedding Settings. Strict fields, same-origin bounded
+writes, duplicate requests, transaction rollback and first-event/zone-edit races
+were checked against fictional disposable data. The existing forged/expired/revoked
+session and outage checks also passed through the shared authorization path.
+Final desktop event browser checks confirmed logged-out Back/direct entry denial.
+See [event scope and precise verification](events/Implementation.md); this does not
+extend the claims to guest links, production abuse controls or deployed TLS.
+
+## Event edit protections — 14 October 2026
+
+Focused create/edit HTTP checks passed. Edit GET/PATCH deny anonymous, forged,
+bearer-only, revoked and stale-version sessions; current admin/organizer access
+works. Foreign-wedding/non-active events return 404. Mutations enforce origin,
+JSON/body limits, strict scope/operational-field rejection, and event revisions.
+Desktop sign-out → Back and direct edit requests stayed at login. The normal full
+suite includes these checks; this run used its focused Events mode, not another
+full authentication-suite run. See [event verification](events/Implementation.md).

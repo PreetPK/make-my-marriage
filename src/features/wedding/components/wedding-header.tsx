@@ -37,8 +37,8 @@ export function WeddingHeader() {
         <div className="flex items-center gap-4">
           <WeddingMobileMenu />
           <Link
-            href="/login"
-            aria-label="Staff sign in"
+            href="/dashboard"
+            aria-label="Open wedding workspace"
             className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-white hover:bg-wine"
           >
             <svg
