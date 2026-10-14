@@ -1,7 +1,13 @@
+import {
+  readRequestBody,
+  readAccountBody,
+  RequestBodyError,
+} from "../src/server/http/requests";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createEventSchema,
+  EVENT_REQUEST_BODY_LIMIT,
   editEventSchema,
   eventListSchema,
   emptyEventValues,
@@ -138,4 +144,105 @@ test("event edit contracts require an event revision and reject all operational/
       editEventSchema.safeParse({ ...body, ...extra }).success,
       false,
     );
+});
+
+test("event body cap accepts valid multibyte/max-escaped forms while keeping account limits separate", async () => {
+  const base = {
+    ...emptyEventValues,
+    name: "式",
+    date: "19/02/2027",
+    startTime: "14:00",
+    venueName: "庭",
+    venueAddress: "庭".repeat(1000),
+    description: "婚".repeat(2000),
+    instructions: "式".repeat(1000),
+  };
+  const maximum = {
+    ...base,
+    name: "\u0001".repeat(200),
+    venueName: "\u0001".repeat(200),
+    venueAddress: "\u0001".repeat(1000),
+    description: "\u0001".repeat(2000),
+    instructions: "\u0001".repeat(1000),
+  };
+  for (const values of [base, maximum]) {
+    for (const revision of [
+      { expectedWeddingRevision: Number.MAX_SAFE_INTEGER },
+      { expectedRevision: Number.MAX_SAFE_INTEGER - 1 },
+    ]) {
+      const payload = {
+        clientRequestId: "00000000-0000-4000-8000-000000000001",
+        ...revision,
+        values,
+      };
+      const parsed =
+        "expectedRevision" in revision
+          ? editEventSchema.parse(payload)
+          : createEventSchema.parse(payload);
+      const json = JSON.stringify(parsed);
+      assert(Buffer.byteLength(json) > 8192);
+      assert(Buffer.byteLength(json) < EVENT_REQUEST_BODY_LIMIT);
+      const request = () =>
+        new Request("http://localhost:3000", { method: "POST", body: json });
+      assert.equal(
+        (await readRequestBody(request(), EVENT_REQUEST_BODY_LIMIT)).toString(
+          "utf8",
+        ),
+        json,
+      );
+      await assert.rejects(
+        readAccountBody(request()),
+        (error) => error instanceof RequestBodyError && error.status === 413,
+      );
+    }
+  }
+});
+test("event streamed byte cap enforces the exact boundary independently of Content-Length", async () => {
+  const request = (body: string, headers: HeadersInit = {}) =>
+    new Request("http://localhost:3000", { method: "POST", headers, body });
+  assert.equal(
+    (
+      await readRequestBody(
+        request("x".repeat(EVENT_REQUEST_BODY_LIMIT)),
+        EVENT_REQUEST_BODY_LIMIT,
+      )
+    ).byteLength,
+    EVENT_REQUEST_BODY_LIMIT,
+  );
+  const variants: HeadersInit[] = [
+    {},
+    { "content-length": "1" },
+    { "content-length": String(EVENT_REQUEST_BODY_LIMIT + 1) },
+  ];
+  for (const headers of variants) {
+    await assert.rejects(
+      readRequestBody(
+        request("😊".repeat(EVENT_REQUEST_BODY_LIMIT / 4 + 1), headers),
+        EVENT_REQUEST_BODY_LIMIT,
+      ),
+      (error) => error instanceof RequestBodyError && error.status === 413,
+    );
+  }
+  let cancelled = false;
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(EVENT_REQUEST_BODY_LIMIT));
+      controller.enqueue(new Uint8Array(1));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  await assert.rejects(
+    readRequestBody(
+      new Request("http://localhost:3000", {
+        method: "POST",
+        body: stream,
+        duplex: "half",
+      } as RequestInit),
+      EVENT_REQUEST_BODY_LIMIT,
+    ),
+    (error) => error instanceof RequestBodyError && error.status === 413,
+  );
+  assert(cancelled);
 });

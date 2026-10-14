@@ -25,8 +25,13 @@ export function isSameOrigin(request: Request) {
   }
 }
 
-export async function readAccountBody(request: Request) {
-  const limit = 8192;
+export function readAccountBody(request: Request) {
+  return readRequestBody(request, 8192);
+}
+
+export async function readRequestBody(request: Request, limit: number) {
+  if (!Number.isSafeInteger(limit) || limit < 1)
+    throw new Error("Invalid request body limit.");
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > limit)
     throw new RequestBodyError("Request too large.", 413);

@@ -1,8 +1,9 @@
 # Make My Marriage — project progress
 
 Last updated: **14 October 2026**.
-Latest application validation: **14 October 2026** — event list/create/edit, 27 local
-regressions, focused create/edit HTTP checks and desktop conflict/retry checks.
+Latest application validation: **14 October 2026** — event request-limit fix, 29 local
+regressions and focused create/edit HTTP checks including multibyte/escaped bodies.
+Prior desktop conflict/retry checks are recorded below.
 The earlier full HTTP/security suite run is recorded below.
 
 This is the project-wide record of completed work and remaining features. The
@@ -21,7 +22,7 @@ redirects. Email verification is deferred. Browser Back/Forward restores now
 recheck access; logged-out visitors cannot reopen dashboard content.
 
 MongoDB Atlas connectivity, isolated account persistence, HTTP security checks,
-and real browser authentication journeys have passed. Twenty-seven local regressions
+and real browser authentication journeys have passed. Twenty-nine local regressions
 and the development checks passed on 14 October; security coverage is recorded in
 [authentication test coverage](Authentication-Test-Coverage.md) for scenarios and
 limits. Public pages and builds remain available without service credentials;
@@ -35,8 +36,9 @@ sample content; website editing, guest access, and other integrations remain fut
 work. See [onboarding implementation](wedding-onboarding/Implementation.md).
 Production readiness and the 1,000-guest / 1,000-event target are unvalidated.
 Authentication fixes and onboarding were committed and pushed as `fc405d6`.
-Wedding Settings, rendering optimizations and event list/create/edit are implemented
-and checked locally. The combined change set is prepared for the feature commit on dev.
+Wedding Settings, rendering optimizations and event list/create/edit were committed
+and pushed to dev in `ef44d0e`. The request-limit follow-up below resolves the
+reviewed transport issue and is included in its own follow-up commit on dev.
 See [Wedding Settings](Wedding-Settings.md) for scope, API and the approved design.
 
 Statuses used below:
@@ -48,15 +50,15 @@ Statuses used below:
 
 ## Foundation and design
 
-| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                                                                                                                                                        |
-| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                                                                                                                                                               |
-| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Twenty-seven local regressions pass, including onboarding/settings and event calendar/zone/edit validation. Prior isolated Atlas lifecycle, HTTP security and browser authentication checks are recorded. |
-| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below.                                                                                                                                         |
-| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                                                                                                                                                                       |
-| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                                                                                                                                                        |
-| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; public admin signup uses the same visual language. Onboarding desktop/mobile direction accepted; all three steps and saving/error states implemented. Full management dashboards remain future work. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.                                      |
+| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                                                                                                                                                          |
+| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                                                                                                                                                                 |
+| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Twenty-nine local regressions pass, including onboarding/settings, event validation and streamed body limits. Prior isolated Atlas lifecycle, HTTP security and browser authentication checks are recorded. |
+| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below.                                                                                                                                           |
+| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                                                                                                                                                                         |
+| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                                                                                                                                                          |
+| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; public admin signup uses the same visual language. Onboarding desktop/mobile direction accepted; all three steps and saving/error states implemented. Full management dashboards remain future work. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.                                        |
 
 ## Homepage coverage
 
@@ -109,7 +111,7 @@ must also follow the [architecture](Make-My-Marriage-System-Architecture.md),
 | Resend                       | Not started | Deferred with email verification; no current provider client or dependency. Domain, sender, delivery, and durable jobs remain.                                                                                                                                                                           |
 | Cloudflare R2                | Not started | Private storage, authorized transfers, image processing, and retention/deletion workflows.                                                                                                                                                                                                               |
 | Inngest                      | Not started | Job entry points, background processing, scheduled reminders, and retries.                                                                                                                                                                                                                               |
-| Feature and security testing | Partial     | Twenty-seven local regressions and onboarding/settings/event checks pass. Prior isolated Atlas lifecycle/HTTP security and browser auth/history checks are recorded. Other feature tests, production abuse controls, delivery, and capacity remain.                                                      |
+| Feature and security testing | Partial     | Twenty-nine local regressions and onboarding/settings/event checks pass. Prior isolated Atlas lifecycle/HTTP security and browser auth/history checks are recorded. Other feature tests, production abuse controls, delivery, and capacity remain.                                                       |
 | Operations and deployment    | Not started | Environment separation, backups, observability, provider capacity checks, Vercel deployment, and release acceptance checks.                                                                                                                                                                              |
 
 ## Verification recorded so far
@@ -570,3 +572,21 @@ invitations, guest management, publication and lifecycle controls remain future 
 The latest implementation checks and isolated-data cleanup are recorded above;
 this documentation update does not represent another database or browser test run.
 Git completion is confirmed by the resulting commit and push report.
+
+## Event request-size review fix — 14 October 2026
+
+Resolved the review finding locally: event POST/PATCH now use a shared streamed
+body reader with a feature-specific 32 KiB limit, accommodating normal serialized
+maximum field lengths, multibyte text and JSON escapes. Account/authentication and
+other existing account-body callers retain the 8 KiB wrapper. Origin, strict field
+validation, permissions and revision checks are unchanged. No UI change was needed.
+
+29 local tests, lint, formatting, TypeScript and Webpack build passed. Focused
+create/edit HTTP checks passed, including valid multibyte persistence and maximum
+JSON-escaped fields on both endpoints; declared and chunked oversized bodies return
+413, and the account endpoint still rejects over 8 KiB. Disposable sz01 was removed
+and independently checked. No real application data, credentials, dependencies or
+deployment changed. The prior P2 request-limit finding is resolved by the
+request-limit follow-up commit on dev. The user approved committing and pushing
+this tested fix; Git completion is confirmed in the commit/push report. No new
+browser or full authentication-suite run is claimed for this transport-only change.

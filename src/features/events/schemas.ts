@@ -112,6 +112,8 @@ export type EventList = EventContext & {
   q: string;
   hasNext: boolean;
 };
+// Accommodates maximum form fields even with six-byte JSON escapes per UTF-16 unit.
+export const EVENT_REQUEST_BODY_LIMIT = 32 * 1024;
 export const EVENT_PAGE_SIZE = 20;
 
 export const editEventSchema = z

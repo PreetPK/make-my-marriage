@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { EVENT_REQUEST_BODY_LIMIT } from "../src/features/events/schemas.ts";
+import { runEventBodyChecks } from "./events-body.http.mjs";
 import { runEventEditChecks } from "./events-edit.http.mjs";
 import { randomUUID } from "node:crypto";
 import { ObjectId } from "mongodb";
@@ -65,7 +67,11 @@ export async function runEventChecks({
   );
   assert.equal((await post(await input(), { body: "{" })).status, 400);
   assert.equal(
-    (await post(await input(), { body: "x".repeat(8193) })).status,
+    (
+      await post(await input(), {
+        body: "x".repeat(EVENT_REQUEST_BODY_LIMIT + 1),
+      })
+    ).status,
     413,
   );
   for (const extra of [
@@ -285,6 +291,7 @@ export async function runEventChecks({
     { _id: wedding._id },
     { $set: { timeZone: "Australia/Melbourne" }, $inc: { revision: 1 } },
   );
+  await runEventBodyChecks({ request, jar, db, origin });
   console.log(
     "PASS events permissions, transport, zone/DST/overnight conversion, duplicate retries, literal search/pagination, rollback, and first-event/settings race",
   );

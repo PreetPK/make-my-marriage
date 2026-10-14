@@ -133,3 +133,13 @@ JSON/body limits, strict scope/operational-field rejection, and event revisions.
 Desktop sign-out → Back and direct edit requests stayed at login. The normal full
 suite includes these checks; this run used its focused Events mode, not another
 full authentication-suite run. See [event verification](events/Implementation.md).
+
+## Event request-limit separation — 14 October 2026
+
+Event bodies now have a 32 KiB cap; the account/authentication wrapper retains
+8 KiB. Local transport tests verify both limits and streamed byte counting even
+with missing/false Content-Length, including cancellation after exceeding the cap.
+Focused HTTP checks accepted multibyte/max-escaped event saves, rejected oversized
+event streams and confirmed oversized account signup still returns 413. Existing
+local authentication regressions passed; the full authentication HTTP suite was
+not repeated. See [event regression details](events/Implementation.md).

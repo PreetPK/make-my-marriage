@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { EVENT_REQUEST_BODY_LIMIT } from "../src/features/events/schemas.ts";
 import { randomUUID } from "node:crypto";
 import { ObjectId } from "mongodb";
 export async function runEventEditChecks({
@@ -51,7 +52,11 @@ export async function runEventEditChecks({
     415,
   );
   assert.equal((await patch(body(), { body: "{" })).status, 400);
-  assert.equal((await patch(body(), { body: "x".repeat(8193) })).status, 413);
+  assert.equal(
+    (await patch(body(), { body: "x".repeat(EVENT_REQUEST_BODY_LIMIT + 1) }))
+      .status,
+    413,
+  );
   for (const extra of [
     { weddingId: "other" },
     { role: "admin" },

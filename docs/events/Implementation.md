@@ -39,7 +39,10 @@ GET `/api/events?q=...&page=...` reads a list; GET `?context=1` reloads the wedd
 zone/revision. POST requires strict JSON with `clientRequestId` (UUID),
 `expectedWeddingRevision`, and the allowlisted `values`. Server-backed staff
 membership supplies the wedding and actor. Anonymous/invalid sessions return 401;
-mutation origins/content type/body length follow the existing HTTP protections.
+mutations require same-origin JSON and a streamed 32 KiB body limit.
+Account/authentication bodies retain their separate 8 KiB cap. The event limit
+accommodates normal serialized maximum-length form fields, including multibyte
+text and JSON escapes, while rejecting oversized raw/streamed requests.
 Responses are no-store; provider/driver errors are not exposed.
 
 Database, services and repository code import server-only. Reads share the existing
@@ -168,3 +171,18 @@ page-timing runs; the normal full suite also includes these event checks.
   was removed. Only disposable fictional data was written. No mobile pass or
   deployment was performed. The earlier full authentication HTTP suite was not
   repeated in this focused run; shared authorization code was unchanged.
+
+## Request-size regression fix — 14 October 2026
+
+The review's multibyte request rejection is fixed with EVENT_REQUEST_BODY_LIMIT
+(32,768 bytes) shared by create/edit routes. readRequestBody counts actual streamed
+bytes, checks declared length, cancels oversized streams and sanitizes stream
+failures. readAccountBody remains an 8,192-byte wrapper for existing callers.
+
+29 local tests and the focused Events HTTP suite passed. Tests accept schema-valid
+CJK fields above 8 KiB and maximum-length six-byte JSON-escaped fields (over 26 KB)
+on POST/PATCH; verify persistence, exact reader boundary, false/missing length
+headers and stream cancellation; reject declared/chunked event bodies above 32 KiB;
+and retain account signup's 8 KiB rejection. Lint, formatting, types and Webpack
+build passed. The disposable sz01 database was removed and its absence checked.
+No UI/browser change, installation, deployment, commit or push was performed.

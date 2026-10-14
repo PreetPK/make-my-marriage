@@ -1,7 +1,8 @@
+import { EVENT_REQUEST_BODY_LIMIT } from "@/features/events/schemas";
 import { getCurrentStaff } from "@/server/auth/authorization";
 import {
   isSameOrigin,
-  readAccountBody,
+  readRequestBody,
   RequestBodyError,
 } from "@/server/http/requests";
 import {
@@ -55,7 +56,11 @@ export async function PATCH(request: Request, { params }: Context) {
     return reply({ message: "JSON required." }, 415);
   let input: unknown;
   try {
-    input = JSON.parse((await readAccountBody(request)).toString("utf8"));
+    input = JSON.parse(
+      (await readRequestBody(request, EVENT_REQUEST_BODY_LIMIT)).toString(
+        "utf8",
+      ),
+    );
   } catch (error) {
     return reply(
       {
