@@ -143,3 +143,38 @@ Focused HTTP checks accepted multibyte/max-escaped event saves, rejected oversiz
 event streams and confirmed oversized account signup still returns 413. Existing
 local authentication regressions passed; the full authentication HTTP suite was
 not repeated. See [event regression details](events/Implementation.md).
+
+## Independent wedding ownership and Members — 15 October 2026
+
+Public signup now creates a separate owned wedding per account. Admin invitations
+join co-owners (admin) or organizers to that existing wedding; legacy memberships
+remain. See [current account rules](Staff-Authentication.md) and
+[Members behavior and exact limits](organizer-invitations/Implementation.md).
+
+34 local regressions, lint, formatting, TypeScript and the final Webpack build pass.
+Isolated Atlas service tests verify concurrent signup rollback/no orphan wedding,
+unique ownership, legacy singleton index/validator adaptation with unrelated
+validation preserved, sessions, and invitation replay rate limiting before email.
+The focused Members HTTP suite passes same-wedding roles, foreign-wedding denial,
+reserved-email signup denial, forged/bound/expired/cancelled/replayed invitation
+handling, concurrent acceptance, transaction rollback, stable mock email retries,
+organizer revocation/session denial and legacy Admin labels.
+
+The complete account/onboarding/settings/events HTTP suite passes on the new
+ownership model, including current access/session protections, injected scope,
+transport caps, event/settings conflicts and rollback, output escaping, persistent
+rate limits, configured HTTPS cookie flags, database outage and credential-free
+page behavior. An initial test-port collision was corrected before the successful
+full rerun. This is not a deployed TLS or production abuse/capacity assessment.
+
+Desktop Chromium verifies the Members invite/accept/cancel/revoke journey, retained
+send-failure values and retry, co-owner login without duplicate onboarding, role
+labels and signed-out Back/direct denial. Rendering tests guard POST-only forms
+with controls disabled until hydration. The final limiter-only change has its
+separate service regression; no UI behavior was changed by it. Email responses
+are mocked throughout; real delivery, sender ownership, cross-browser/mobile
+coverage, a full accessibility audit and production security review remain.
+All nine explicitly selected disposable databases were independently confirmed
+empty, temporary link data removed and test servers stopped. No real application
+records, credentials, dependencies, emails, deployment or Git changes were made by
+these checks; implementation files remain uncommitted and unpushed.

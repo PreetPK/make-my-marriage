@@ -5,7 +5,8 @@ import { getDatabase } from "@/server/db/mongodb";
 
 export type WeddingRecord = Document & {
   _id: ObjectId;
-  singletonKey: "primary";
+  singletonKey?: "primary";
+  ownerUserId?: ObjectId;
   status: "setup" | "active" | "archived";
   revision: number;
   couple?: { partnerOneName: string; partnerTwoName: string };
@@ -26,16 +27,16 @@ export const findWedding = cache(async function readWedding(weddingId: string) {
   const db = await getDatabase();
   return db.collection<WeddingRecord>("weddings").findOne({
     _id: new ObjectId(weddingId),
-    singletonKey: "primary",
     status: { $in: ["setup", "active"] },
   });
 });
 const validator = {
   $jsonSchema: {
     bsonType: "object",
-    required: ["singletonKey", "status", "revision"],
+    required: ["status", "revision"],
     properties: {
       singletonKey: { enum: ["primary"] },
+      ownerUserId: { bsonType: "objectId" },
       status: { enum: ["setup", "active", "archived"] },
       revision: {
         bsonType: ["int", "long", "double"],
@@ -92,26 +93,51 @@ let storage: Promise<void> | undefined;
 export async function ensureWeddingStorage() {
   storage ??= (async () => {
     const db = await getDatabase();
-    const collection = await db.listCollections({ name: "weddings" }).next();
-    if (!collection) throw new Error("Wedding is unavailable.");
+    let collection = await db.listCollections({ name: "weddings" }).next();
+    if (!collection) {
+      try {
+        await db.createCollection("weddings", { validator });
+      } catch (error) {
+        if (!(error instanceof Error && "code" in error && error.code === 48))
+          throw error;
+      }
+      collection = await db.listCollections({ name: "weddings" }).next();
+    }
     const previous =
-      "options" in collection ? collection.options?.validator : undefined;
-    // Preserve an existing validator rather than weakening unrelated invariants.
-    if (
-      !previous ||
-      !JSON.stringify(previous).includes(JSON.stringify(validator))
-    ) {
+      collection && "options" in collection
+        ? collection.options?.validator
+        : undefined;
+    // Remove only the superseded singleton requirement, preserving other validators.
+    const compatible = removeSingletonRequirement(previous ?? {});
+    if (!JSON.stringify(compatible).includes(JSON.stringify(validator))) {
       await db.command({
         collMod: "weddings",
-        validator:
-          previous && Object.keys(previous).length
-            ? { $and: [previous, validator] }
-            : validator,
+        validator: Object.keys(compatible).length
+          ? { $and: [compatible, validator] }
+          : validator,
       });
     }
-    await db
-      .collection("weddings")
-      .createIndex({ singletonKey: 1 }, { unique: true });
+    const weddings = db.collection("weddings");
+    const oldIndex = (await weddings.listIndexes().toArray()).find(
+      (index) => index.name === "singletonKey_1",
+    );
+    if (oldIndex && !oldIndex.partialFilterExpression)
+      await weddings.dropIndex("singletonKey_1");
+    // Preserve uniqueness for legacy primary records; independent weddings omit this key.
+    await weddings.createIndex(
+      { singletonKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { singletonKey: { $type: "string" } },
+      },
+    );
+    await weddings.createIndex(
+      { ownerUserId: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { ownerUserId: { $type: "objectId" } },
+      },
+    );
   })().catch((error) => {
     storage = undefined;
     throw error;
@@ -128,7 +154,6 @@ export async function updateWedding(
   return db.collection<WeddingRecord>("weddings").findOneAndUpdate(
     {
       _id: new ObjectId(weddingId),
-      singletonKey: "primary",
       status: "setup",
       revision: expectedRevision,
       "onboarding.completedAt": { $exists: false },
@@ -136,4 +161,25 @@ export async function updateWedding(
     update,
     { returnDocument: "after" },
   );
+}
+
+export function removeSingletonRequirement(
+  value: unknown,
+): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "required" && Array.isArray(child))
+      result[key] = child.filter((item) => item !== "singletonKey");
+    else if (Array.isArray(child))
+      result[key] = child.map((item) =>
+        typeof item === "object" && item
+          ? removeSingletonRequirement(item)
+          : item,
+      );
+    else if (child && typeof child === "object")
+      result[key] = removeSingletonRequirement(child);
+    else result[key] = child;
+  }
+  return result;
 }

@@ -14,7 +14,11 @@ export async function runPagePerformanceChecks({
   const jar = new BrowserCookies();
   assert.equal((await login(jar)).status, 200);
   let revision = (
-    await db.collection("weddings").findOne({ singletonKey: "primary" })
+    await db.collection("weddings").findOne({
+      ownerUserId: (
+        await db.collection("users").findOne({ emailNormalized: values.email })
+      )._id,
+    })
   ).revision;
   for (const [step, fields] of [
     [

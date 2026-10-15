@@ -28,7 +28,6 @@ export async function updateSettings(
       async () => {
         const scope = {
           _id: new ObjectId(weddingId),
-          singletonKey: "primary" as const,
           status: "active" as const,
           revision: expectedRevision,
         };

@@ -23,6 +23,7 @@ export function StaffNavigation({ admin }: { admin: boolean }) {
                 label: "Wedding Settings",
                 icon: "settings",
               },
+              { href: "/members", label: "Members", icon: "members" },
             ]
           : []),
       ].map((item) => (
@@ -51,6 +52,11 @@ export function StaffNavigation({ admin }: { admin: boolean }) {
               <>
                 <rect x="3" y="5" width="18" height="16" rx="2" />
                 <path d="M7 2v6m10-6v6M3 11h18" />
+              </>
+            ) : item.icon === "members" ? (
+              <>
+                <circle cx="9" cy="7" r="3" />
+                <path d="M3 21v-3a6 6 0 0 1 12 0v3m2-17a3 3 0 0 1 0 6m1 5a5 5 0 0 1 3 5v1" />
               </>
             ) : (
               <>

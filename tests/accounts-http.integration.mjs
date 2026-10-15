@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runMemberChecks } from "./members.http.mjs";
 import { runEventChecks } from "./events.http.mjs";
 import { runPagePerformanceChecks } from "./page-performance.http.mjs";
 import { runWeddingSettingsChecks } from "./wedding-settings.http.mjs";
@@ -24,7 +25,12 @@ if (await db.listCollections().hasNext()) {
   assert.fail("Refuse to alter an existing test database");
 }
 const secret = randomBytes(32).toString("hex");
-const origin = "http://127.0.0.1:3107";
+const testPort = Number(process.env.ACCOUNT_TEST_PORT ?? "3107");
+assert(
+  [3107, 3108].includes(testPort),
+  "Only dedicated loopback test ports are allowed",
+);
+const origin = "http://127.0.0.1:" + testPort;
 const servers = [];
 const password = "Test correct horse battery staple";
 const values = {
@@ -58,6 +64,9 @@ async function startServer(port, overrides = {}) {
   const child = spawn(
     process.execPath,
     [
+      ...(process.env.ACCOUNT_TEST_MEMBERS_ONLY === "1"
+        ? ["--import", "./tests/resend-fixture.mjs"]
+        : []),
       "node_modules/next/dist/bin/next",
       "start",
       "--hostname",
@@ -71,7 +80,11 @@ async function startServer(port, overrides = {}) {
         APP_URL: appUrl,
         NEXTAUTH_URL: appUrl,
         NEXTAUTH_SECRET: secret,
-        RESEND_API_KEY: "",
+        RESEND_API_KEY:
+          process.env.ACCOUNT_TEST_MEMBERS_ONLY === "1"
+            ? "fixture-not-a-real-key"
+            : "",
+        STAFF_EMAIL_FROM: "Make My Marriage <onboarding@resend.dev>",
         ACCOUNT_EMAIL_FROM: "",
         ...overrides,
       },
@@ -160,8 +173,33 @@ function checkRedirect(response, path) {
   );
 }
 try {
-  await startServer(3107);
-  if (process.env.ACCOUNT_TEST_EVENTS_ONLY === "1") {
+  await startServer(testPort);
+  if (process.env.ACCOUNT_TEST_MEMBERS_ONLY === "1") {
+    const jar = await runPagePerformanceChecks({
+      request,
+      signup,
+      login,
+      BrowserCookies,
+      db,
+      origin,
+      values,
+      skipMeasurements: true,
+    });
+    if (process.env.ACCOUNT_TEST_BROWSER_ONLY !== "1")
+      await runMemberChecks({
+        request,
+        signup,
+        login,
+        BrowserCookies,
+        db,
+        origin,
+        values,
+        jar,
+        secret,
+        checkRedirect,
+      });
+    if (process.env.ACCOUNT_TEST_BROWSER === "1") await waitForBrowser();
+  } else if (process.env.ACCOUNT_TEST_EVENTS_ONLY === "1") {
     const jar = await runPagePerformanceChecks({
       request,
       signup,
@@ -499,6 +537,25 @@ try {
       ).status,
       201,
     );
+    const xssUser = await db
+      .collection("users")
+      .findOne({ emailNormalized: "xss@example.invalid" });
+    const sourceWedding = await db
+      .collection("weddings")
+      .findOne({ _id: stored.weddingId });
+    await db.collection("weddings").updateOne(
+      { _id: xssUser.weddingId },
+      {
+        $set: {
+          status: "active",
+          couple: sourceWedding.couple,
+          timeZone: sourceWedding.timeZone,
+          currency: sourceWedding.currency,
+          currencyMinorUnit: sourceWedding.currencyMinorUnit,
+          onboarding: sourceWedding.onboarding,
+        },
+      },
+    );
     assert.equal((await login(jar, "xss@example.invalid")).status, 200);
     const html = await (await request("/dashboard", { jar })).text();
     assert(html.includes("&lt;script&gt;"));
@@ -598,7 +655,7 @@ try {
       "PASS HTTPS configuration selects Secure and host-prefixed CSRF cookies (not a deployed TLS test)",
     );
     if (process.env.ACCOUNT_TEST_BROWSER === "1") await waitForBrowser();
-    const outageOrigin = await startServer(3108, {
+    const outageOrigin = await startServer(3111, {
       MONGODB_URI: "mongodb://127.0.0.1:1",
       MONGODB_DATABASE: databaseName,
     });

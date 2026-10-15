@@ -85,7 +85,7 @@ export async function runEventChecks({
     { values: { ...values, startTime: "25:00" } },
   ])
     assert.equal((await post({ ...(await input()), ...extra })).status, 400);
-  const wedding = await weddings.findOne({ singletonKey: "primary" }),
+  const wedding = await weddings.findOne({ status: "active" }),
     before = JSON.stringify(wedding.website);
   const firstBody = await input();
   const results = await Promise.all([post(firstBody), post(firstBody)]);

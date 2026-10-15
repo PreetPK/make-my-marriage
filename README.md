@@ -14,13 +14,25 @@ Staff sign-in, public admin signup, sign-out, and a
 protected workspace entry now have backend implementations using MongoDB and
 NextAuth. Signup creates active admins immediately; email verification is deferred.
 The complete [wedding onboarding flow](docs/wedding-onboarding/Implementation.md)
-saves the shared wedding and routes admins to the dashboard when setup is complete.
+saves each wedding and routes admins to the dashboard when setup is complete.
 The [event list, create and edit flows](docs/events/Implementation.md) save schedules and venues
 in MongoDB using the wedding time zone, with revision conflicts and retained save retries.
-Organizer invitations and guest assignments are next.
+Members and co-owner/organizer invitations are implemented; guest assignments are next.
 See [staff authentication setup](docs/Staff-Authentication.md). Recovery/reset,
-organizer management, and other provider features remain later work.
+other provider features remain later work.
 
+Public signup now creates a separate wedding and records its owner; one account
+belongs to one wedding. Owners/admins use `/members` to invite a co-owner with admin
+permissions or an organizer with limited access. Invitations are single-use and
+expire after 48 hours. Existing legacy admins keep access without guessing an owner.
+See [Members behavior and tests](docs/organizer-invitations/Implementation.md).
+
+Staff email uses RESEND_API_KEY and STAFF_EMAIL_FROM in the ignored .env.local,
+with APP_URL set to the origin recipients can reach. The server-only Resend REST
+client is implemented without adding dependencies. onboarding@resend.dev is limited
+to the Resend account email; domain setup for other recipients remains deferred.
+Email verification is still deferred. Email tests use a mock; real sending is not
+validated.
 The homepage components live in `src/features/wedding/components/`. Asset sources
 and next UI steps are recorded in [the design reference](docs/Homepage-Design.md).
 For completed work, remaining features, and recorded checks, see
@@ -89,11 +101,11 @@ included by the current Next.js config do not yet declare ESLint 10 support.
 Keep this compatible pin until those plugins support ESLint 10; do not force a
 peer-dependency override. This is a development-tooling limitation.
 
-Other provider SDKs, authentication, image processing, and test frameworks are
+Other provider SDKs, image processing, and additional test frameworks are
 deferred until their corresponding features are implemented.
 MongoDB driver 7.7.0 was verified and installed on 8 October 2026 for Node 24. Stable next-auth 4.24.15 was verified for Next.js 16/React 19 and selected with
 credentials/JWT sessions. Development runner tsx 4.23.15 supports account scripts
-and tests. Resend is deferred until an email feature is implemented.
+and tests. Resend is used for staff invitation sending.
 
 ## Source boundaries
 
@@ -102,14 +114,16 @@ The staff layout owns dashboard navigation and other staff UI. Route
 groups organize pages; they do not enforce authorization.
 
 Account UI/business logic/repositories now live in src/features/accounts;
-shared authentication and database connections live in src/server. The staff layout
+shared authentication, database connections and provider clients live in src/server.
+Member invitations and access management live in src/features/members; the Resend
+REST client is src/server/providers/resend.ts. The staff layout
 always checks access dynamically. The `/onboarding` admin flow has its own
 `(onboarding)` route group for the minimal setup screen, reuses the server access
 check and history guard, and keeps its UI/schema in src/features/wedding-onboarding.
 See [onboarding implementation](docs/wedding-onboarding/Implementation.md) for the
 current behavior, API, tests, and remaining scope. Create remaining folders when their first feature arrives:
 
-| Future location                               | Responsibility                                         |
+| Location                                      | Responsibility                                         |
 | --------------------------------------------- | ------------------------------------------------------ |
 | `src/app/(guest)/`                            | Shared wedding, personal invitation, and gallery pages |
 | `src/app/api/`                                | HTTP handlers added alongside working features         |
@@ -118,7 +132,7 @@ current behavior, API, tests, and remaining scope. Create remaining folders when
 | `src/features/<feature>/components/`          | Feature-specific UI                                    |
 | `src/features/<feature>/server/service.ts`    | Business rules and permission enforcement              |
 | `src/features/<feature>/server/repository.ts` | Feature-specific database queries                      |
-| `src/server/integrations/`                    | R2, Resend, and Inngest clients                        |
+| `src/server/providers/`                       | Resend now; R2/Inngest clients when needed             |
 | `src/server/jobs/`                            | Background entry points calling feature services       |
 | `tests/`                                      | Integration and browser tests                          |
 
@@ -208,12 +222,11 @@ runs explicitly selected temporary-database tests; npm run accounts:setup perfor
 storage initialization only; it does not create users or send email. Read the authentication
 setup guide before running either database-writing command.
 
-Account scope changed on 9 October 2026: every new public signup receives admin
-immediate access to the single wedding. Invitations and the
-two-partner admin cap in older specifications are superseded. Signup fields work
-without email settings; email verification and Resend are deferred.
-Wedding names, date, time zone, and currency are configured later.
-
+Account scope changed on 14 October 2026: each public signup receives admin access
+to its own newly created wedding. Invited members join the intended existing wedding.
+The former singleton and two-partner cap are superseded; existing data is retained.
+Public signup works without email settings. Wedding names, date, time zone and
+currency are configured during onboarding.
 Authentication security and browser coverage, optional npm run test:http setup,
 and remaining release checks are recorded in
 [authentication test coverage](docs/Authentication-Test-Coverage.md).

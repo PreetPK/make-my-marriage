@@ -21,7 +21,7 @@ export async function runWeddingSettingsChecks({
   assert.equal((await request("/wedding-settings", { jar })).status, 200);
   checkRedirect(await request("/wedding-settings"), "/login");
   let state = (await (await get()).json()).state;
-  let record = await weddings.findOne({ singletonKey: "primary" });
+  let record = await weddings.findOne({ status: "active" });
   const identity = record._id;
   const completion = record.onboarding.completedAt;
   const values = {
@@ -198,7 +198,7 @@ export async function runWeddingSettingsChecks({
   assert.equal(record.website.story, "Keep this story");
   assert.equal(record.couple.extra, "Keep this value");
   assert.deepEqual(record.onboarding.completedAt, completion);
-  assert.equal(await weddings.countDocuments(), 1);
+  assert.equal(await weddings.countDocuments(), 2);
   assert.match((await get()).headers.get("cache-control"), /no-store/);
   assert(
     (await (await request("/dashboard", { jar })).text()).includes("Asha"),

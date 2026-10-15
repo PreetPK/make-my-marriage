@@ -2,7 +2,7 @@
 
 ## Scope and references
 
-- One wedding; planning target: 1,000 unique guests and 1,000 events. Desktop-first,
+- One wedding per account; separate wedding workspaces; planning target per wedding: 1,000 unique guests and 1,000 events. Desktop-first,
   with mobile-friendly guest flows. Guests use scoped links without accounts.
 - Read [README.md](README.md) for setup, future folders, and known limitations.
   Use [package.json](package.json) and `.nvmrc` for current versions and commands.
@@ -15,14 +15,21 @@
     [technical reference](docs/Make-My-Marriage-Database-Technical-Reference.md).
   - [API guide](docs/Make-My-Marriage-API-Design.md) and
     [technical reference](docs/Make-My-Marriage-API-Technical-Reference.md).
-- Current account rule (9 October 2026): signup is public; every newly created
-  account immediately receives admin access to the one wedding. Email verification
-  is deferred; do not require it or mark unverified addresses as verified.
-  Invitations, preauthorized partner emails, and the two-admin cap are superseded.
-  See [staff authentication](docs/Staff-Authentication.md) for the active implementation.
-- Wedding onboarding configures the singleton once and is shared by all admins.
-  Keep server authorization and revision checks on saves; setup completion does
-  not publish the guest website. See [onboarding implementation](docs/wedding-onboarding/Implementation.md).
+- Current account policy (14 October 2026): public signup creates an independent
+  wedding and its admin owner atomically. Each account belongs to one wedding.
+  Co-owners join only through admin invitations and receive admin permissions;
+  organizers join through organizer invitations. Roles and wedding scope come
+  from the database, never from client claims. See [Members](docs/organizer-invitations/Implementation.md).
+- Preserve legacy memberships and admins. Do not invent an owner for old singleton
+  weddings, move accounts between weddings, or enable owner/admin revocation.
+  Every feature query/mutation must use the authenticated wedding ID. The old
+  singleton/two-preauthorized-admin/invite-only-everywhere proposals are superseded.
+- Email verification remains deferred; do not require it or mark addresses verified.
+  Staff email uses server-only RESEND_API_KEY/STAFF_EMAIL_FROM. Resend's development
+  sender can send only to its account email; other recipients need a verified domain.
+- Wedding onboarding configures each wedding once and is shared by its admins.
+  Keep server authorization and revision checks on saves; completion does not publish
+  the guest website. See [onboarding](docs/wedding-onboarding/Implementation.md).
 - Completed-wedding settings are admin-only. Time zone locks once events exist;
   currency locks once expenses exist. Future event/expense creation must coordinate
   with wedding revisions to preserve these locks. See [Wedding Settings](docs/Wedding-Settings.md).
@@ -49,7 +56,7 @@
   with primitive keys, never a persistent permissions cache. Authorize before
   streaming protected UI; mutations must recheck access and revisions. Measure
   complete responses as well as first byte; see [performance](docs/Performance.md).
-- Keep the root layout minimal. The future `(staff)` layout owns dashboard UI;
+- Keep the root layout minimal. The `(staff)` layout owns dashboard UI;
   `(auth)` owns staff account screens, and `(guest)` owns guest screens. Route
   groups do not enforce permissions.
 - Use Tailwind and shared CSS tokens. Apply approved Stitch designs when supplied.

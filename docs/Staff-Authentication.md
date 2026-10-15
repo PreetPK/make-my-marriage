@@ -1,25 +1,28 @@
 # Staff authentication
 
-Updated: **9 October 2026**. References: [PRD REQ-01](Make-My-Marriage-PRD.md),
+Updated: **15 October 2026**. References: [PRD REQ-01](Make-My-Marriage-PRD.md),
 [account API guide](Make-My-Marriage-API-Design.md), and
 [database reference](Make-My-Marriage-Database-Technical-Reference.md).
 
 ## Current account rule
 
-The user explicitly approved public signup: every new account is an active admin
-of the single wedding and can sign in immediately. Email verification is deferred.
-There is no invitation, email allowlist, role selector, or two-account cap. These
-explicit decisions supersede the older specifications. New accounts do not get an
-emailVerifiedAt value; their email addresses have not been verified.
+Public signup creates a new wedding and its admin owner together in a MongoDB
+transaction. The website supports independent weddings, with one wedding per
+account. The wedding stores ownerUserId; a co-owner is an invited admin of the same
+wedding. Organizers have the existing limited permissions. An invitation reserves
+the recipient email for its intended wedding; signup cannot bypass that reservation.
+Existing accounts cannot move weddings or be promoted through an invitation.
 
-Signup requires MongoDB configuration, but no Resend settings. Login additionally
-requires NEXTAUTH_SECRET and NEXTAUTH_URL. Set APP_URL and NEXTAUTH_URL to the
-browser origin, including its port. Store secrets only in the ignored .env.local.
-Public pages and builds still work without external-service credentials.
+This user-approved policy supersedes both singleton public-admin signup and the
+intermediate invite-only-everywhere proposal. Existing admins keep their old
+membership. Legacy weddings without ownerUserId show Admin rather than an invented
+Owner/Co-owner distinction. No verification requirement or emailVerifiedAt is added.
 
-The first signup reserves the singleton wedding setup identity. Wedding names,
-date, time zone, and currency remain unset. Duplicate normalized email addresses
-are rejected by application checks and a unique database index.
+Signup requires MongoDB but no email configuration. Login requires NEXTAUTH_SECRET
+and NEXTAUTH_URL. Staff invitation sending additionally requires RESEND_API_KEY,
+STAFF_EMAIL_FROM and a reachable APP_URL. Store secrets only in ignored .env.local.
+Public rendering/builds remain independent of credentials. See
+[Members implementation](organizer-invitations/Implementation.md).
 
 Stable next-auth 4.24.15 supports the selected Next.js/React versions. Credentials
 use JWT sessions and application-owned persistence. Passwords have 15–128 Unicode
@@ -46,10 +49,11 @@ headers are configured in next.config.ts.
 
 ## Storage and checks
 
-Signup initializes the user validator, unique email/singleton indexes, and rate-limit
-TTL index. Legacy adminSlot constraints are removed; existing user records are
+Signup initializes user/wedding validation, unique email/owner indexes, a partial
+legacy singleton index, and the rate-limit TTL index. Singleton requirements are
+removed from old wedding validators while unrelated validation is preserved. Legacy adminSlot constraints are removed; existing user records are
 preserved. Existing pending-verification records are not automatically activated.
-No verification routes, tokens, emails, or provider client are used by this flow.
+Public signup sends no email. Staff invitation tokens/provider client are a separate feature.
 
 npm run accounts:setup initializes storage only; it creates no users and sends no
 emails. npm test covers password policy, a mocked signup/login flow without email settings,
@@ -72,9 +76,10 @@ commands, cleanup, known tooling findings, and release limitations.
 
 ## Deferred work
 
-Email verification and Resend setup will return in a later feature. Previously
+Email verification remains deferred. Real invitation delivery and a verified sender
+domain require separate validation. Previously
 approved verification expiry (24 hours) and reset expiry (one hour) remain future
-rules, not active behavior. Password recovery, staff management, email delivery
+rules, not active behavior. Password recovery, owner transfer/admin removal, automatic email delivery
 jobs, production rate-limit tuning, deployment checks, and capacity testing remain.
 PRD v1.4 and architecture v1.1 were not found; older source documents are retained.
 

@@ -174,10 +174,7 @@ export async function insertEvent(
         }
         const wedding = await db
           .collection<WeddingRecord>("weddings")
-          .findOne(
-            { _id: weddingId, singletonKey: "primary", status: "active" },
-            { session },
-          );
+          .findOne({ _id: weddingId, status: "active" }, { session });
         if (!wedding?.onboarding?.completedAt || !wedding.timeZone)
           throw new EventError(
             "Finish wedding setup before adding events.",

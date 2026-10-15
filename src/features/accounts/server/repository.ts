@@ -1,6 +1,9 @@
 import "server-only";
 import { cache } from "react";
-import { findWedding } from "@/features/wedding-onboarding/server/repository";
+import {
+  ensureWeddingStorage,
+  findWedding,
+} from "@/features/wedding-onboarding/server/repository";
 import { ObjectId } from "mongodb";
 import { getDatabase } from "@/server/db/mongodb";
 
@@ -14,6 +17,7 @@ export type StaffUser = {
   status: "invited" | "pending_verification" | "active" | "revoked";
   credential?: { passwordHash: string; changedAt: Date };
   emailVerifiedAt?: Date;
+  invitationId?: string;
   sessionVersion: number;
   createdAt: Date;
   updatedAt: Date;
@@ -124,9 +128,7 @@ export async function ensureAccountStorage() {
         await users.dropIndex(index.name);
     }
     await users.createIndex({ emailNormalized: 1 }, { unique: true });
-    await database
-      .collection("weddings")
-      .createIndex({ singletonKey: 1 }, { unique: true });
+    await ensureWeddingStorage();
     await database
       .collection("authRateLimits")
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });

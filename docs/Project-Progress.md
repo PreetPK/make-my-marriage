@@ -1,10 +1,11 @@
 # Make My Marriage — project progress
 
-Last updated: **14 October 2026**.
-Latest application validation: **14 October 2026** — event request-limit fix, 29 local
-regressions and focused create/edit HTTP checks including multibyte/escaped bodies.
-Prior desktop conflict/retry checks are recorded below.
-The earlier full HTTP/security suite run is recorded below.
+Last updated: **15 October 2026**.
+Latest application validation: **15 October 2026** — 34 local regressions,
+lint, formatting, TypeScript and Webpack build pass. Isolated ownership/migration
+and invitation replay-limit service checks pass, as do focused Members HTTP,
+the full account/onboarding/settings/events HTTP suite and desktop Members checks.
+All nine disposable databases were independently confirmed empty; test servers stopped.
 
 This is the project-wide record of completed work and remaining features. The
 specifications describe requirements; this file records what actually exists.
@@ -16,14 +17,22 @@ Read [README](../README.md) for setup and
 The scaffold and approved Stitch homepage UI are implemented. The homepage uses
 sample wedding content. Shared onboarding/settings and event list/create/edit work;
 guest management remains future work.
-Public signup creates active admins of the single wedding, with immediate login,
-sign-out, server-protected dashboard entry, and authenticated account-page
-redirects. Email verification is deferred. Browser Back/Forward restores now
-recheck access; logged-out visitors cannot reopen dashboard content.
+Public signup now creates a separate wedding and its admin owner atomically.
+Each account belongs to one wedding. Admins invite co-owners (admin permissions)
+or organizers through Members; invitation acceptance joins the existing wedding.
+Existing legacy admins keep their membership and display Admin when no owner was
+recorded. Email verification remains deferred. Protected pages and browser history
+continue to recheck current membership.
 
+Members list/invite/accept/cancel and organizer revocation are implemented locally.
+The server-only Resend client supports manual retries and truthful send status;
+real delivery is untested. Development sender onboarding@resend.dev can send only
+to the Resend account email. Domain setup for other recipients, background email
+jobs, owner transfer/admin removal and account recovery remain deferred.
+See [Members implementation](organizer-invitations/Implementation.md).
 MongoDB Atlas connectivity, isolated account persistence, HTTP security checks,
-and real browser authentication journeys have passed. Twenty-nine local regressions
-and the development checks passed on 14 October; security coverage is recorded in
+and real browser authentication journeys have passed. Thirty-four local regressions
+and the development checks passed on 15 October; security coverage is recorded in
 [authentication test coverage](Authentication-Test-Coverage.md) for scenarios and
 limits. Public pages and builds remain available without service credentials;
 working signup/login require MongoDB and authentication configuration.
@@ -50,15 +59,15 @@ Statuses used below:
 
 ## Foundation and design
 
-| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                                                                                                                                                          |
-| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                                                                                                                                                                 |
-| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Twenty-nine local regressions pass, including onboarding/settings, event validation and streamed body limits. Prior isolated Atlas lifecycle, HTTP security and browser authentication checks are recorded. |
-| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below.                                                                                                                                           |
-| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                                                                                                                                                                         |
-| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                                                                                                                                                          |
-| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; public admin signup uses the same visual language. Onboarding desktop/mobile direction accepted; all three steps and saving/error states implemented. Full management dashboards remain future work. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.                                        |
+| Area                            | Status   | Completed scope / remaining work                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository and scaffold         | Complete | One Next.js application and npm manifest; TypeScript, Zod, Tailwind, exact dependencies and lockfile, Node/npm pins, standard configuration, README, and root AGENTS instructions.                                                                                                                                                                                                                          |
+| Application shell               | Complete | Minimal root layout, metadata requesting no indexing, global styles, custom 404, and server-only validation for basic environment settings.                                                                                                                                                                                                                                                                 |
+| Development checks              | Complete | Lint, formatting, type-check, and build scripts exist. Webpack build passes; the local Turbopack port restriction remains documented in README. Thirty-four local regressions pass, including ownership, invitation inputs/tokens, safe form transport, onboarding/settings and event validation/body limits. Prior isolated Atlas lifecycle, HTTP security and browser authentication checks are recorded. |
+| Architecture and specifications | Partial  | Six source documents exist and approved working conventions are recorded. Missing versions, contradictory permissions, and proposed defaults still need resolution with their features; see the open items below.                                                                                                                                                                                           |
+| Stitch design access            | Complete | Connection authenticated and the Make My Marriage Website project retrieved. This is development tooling, not an app dependency; its key is outside the repository.                                                                                                                                                                                                                                         |
+| Homepage design and assets      | Complete | User-approved desktop design translated into responsive UI; local fonts with licenses, logo, portrait, map artwork, shared colors, and typography.                                                                                                                                                                                                                                                          |
+| Other Stitch screens            | Partial  | Stitch sign-in layout implemented; public admin signup uses the same visual language. Onboarding desktop/mobile direction accepted; all three steps and saving/error states implemented. Full management dashboards remain future work. Admin/organizer dashboards and empty-dashboard screens remain unimplemented.                                                                                        |
 
 ## Homepage coverage
 
@@ -87,21 +96,21 @@ must also follow the [architecture](Make-My-Marriage-System-Architecture.md),
 [database design](Make-My-Marriage-Database-Design.md), and
 [API design](Make-My-Marriage-API-Design.md).
 
-| Feature                          | Requirement                  | Status      | Remaining scope                                                                                                                                                                                                                                                        |
-| -------------------------------- | ---------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Staff accounts and authorization | REQ-01 (scope updated 9 Oct) | Partial     | Public admin signup, sign-in/out, server-protected entry, signed-in account redirects, and Back/Forward checks pass. Verification/Resend, recovery/reset, and production preparation remain.                                                                           |
-| Shared and personal guest access | REQ-02                       | Not started | Server-validated wedding, invitation, and gallery links, revocation/replacement, and scoped access.                                                                                                                                                                    |
-| Wedding setup and website        | REQ-03                       | Partial     | Shared three-step onboarding, persistence, saved-step resume and completion routing work. Completed-wedding settings editing is implemented; story/photos, homepage connection and guest website access remain.                                                        |
-| Event management                 | REQ-04                       | Partial     | Desktop list/search/pagination, creation and editing persist schedules/venues; permission, zone-lock, conflict, optional clearing and retry checks pass. Guest assignments, publication and cancellation remain; see [event implementation](events/Implementation.md). |
-| Guests and digital invitations   | REQ-05                       | Not started | Individual guest records, event assignments, personal links, controlled invitation sends, and delivery results.                                                                                                                                                        |
-| Event-level RSVP                 | REQ-06                       | Not started | Authorized responses, statuses, staff corrections, and confirmed deadline behavior.                                                                                                                                                                                    |
-| Email reminders                  | REQ-07                       | Not started | Manual and scheduled reminders, eligibility, retries, and truthful delivery history.                                                                                                                                                                                   |
-| Staff dashboards                 | REQ-08                       | Partial     | Protected welcome, saved wedding summary and sign-out exist. Full management dashboard UI, counts, filters and feature data remain.                                                                                                                                    |
-| Expenses                         | REQ-09                       | Not started | Expense records, categories, payment state, and approved totals/model.                                                                                                                                                                                                 |
-| Organizer management             | REQ-10 (original scope)      | Not started | Invitation-only organizer roles are superseded for new signups; all new accounts are admins. Future staff-management scope needs discussion with that feature.                                                                                                         |
-| Planner discovery                | REQ-11                       | Not started | Sample planner directory; real planner API integration remains outside initial scope.                                                                                                                                                                                  |
-| Photo galleries and QR sharing   | REQ-12                       | UI only     | Authorized albums, R2 uploads, image processing, original downloads, real link-based QR codes, and admin-only deletion.                                                                                                                                                |
-| YouTube livestream               | REQ-13                       | UI only     | Admin configuration and guest playback under the confirmed access rules.                                                                                                                                                                                               |
+| Feature                          | Requirement                   | Status      | Remaining scope                                                                                                                                                                                                                                                                              |
+| -------------------------------- | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Staff accounts and authorization | REQ-01 (scope updated 9 Oct)  | Partial     | Independent wedding signup, ownership, co-owner/organizer invitations and protected staff entry are implemented. Real email delivery, verification, recovery/reset and production preparation remain.                                                                                        |
+| Shared and personal guest access | REQ-02                        | Not started | Server-validated wedding, invitation, and gallery links, revocation/replacement, and scoped access.                                                                                                                                                                                          |
+| Wedding setup and website        | REQ-03                        | Partial     | Shared three-step onboarding, persistence, saved-step resume and completion routing work. Completed-wedding settings editing is implemented; story/photos, homepage connection and guest website access remain.                                                                              |
+| Event management                 | REQ-04                        | Partial     | Desktop list/search/pagination, creation and editing persist schedules/venues; permission, zone-lock, conflict, optional clearing and retry checks pass. Guest assignments, publication and cancellation remain; see [event implementation](events/Implementation.md).                       |
+| Guests and digital invitations   | REQ-05                        | Not started | Individual guest records, event assignments, personal links, controlled invitation sends, and delivery results.                                                                                                                                                                              |
+| Event-level RSVP                 | REQ-06                        | Not started | Authorized responses, statuses, staff corrections, and confirmed deadline behavior.                                                                                                                                                                                                          |
+| Email reminders                  | REQ-07                        | Not started | Manual and scheduled reminders, eligibility, retries, and truthful delivery history.                                                                                                                                                                                                         |
+| Staff dashboards                 | REQ-08                        | Partial     | Protected welcome, saved wedding summary and sign-out exist. Full management dashboard UI, counts, filters and feature data remain.                                                                                                                                                          |
+| Expenses                         | REQ-09                        | Not started | Expense records, categories, payment state, and approved totals/model.                                                                                                                                                                                                                       |
+| Organizer management             | REQ-10 (scope updated 14 Oct) | Partial     | Desktop Members, co-owner/organizer invitations, acceptance, cancellation, manual email retry and organizer revocation are implemented. Real email delivery, automatic jobs, admin removal/transfer and restoration remain deferred; see [Members](organizer-invitations/Implementation.md). |
+| Planner discovery                | REQ-11                        | Not started | Sample planner directory; real planner API integration remains outside initial scope.                                                                                                                                                                                                        |
+| Photo galleries and QR sharing   | REQ-12                        | UI only     | Authorized albums, R2 uploads, image processing, original downloads, real link-based QR codes, and admin-only deletion.                                                                                                                                                                      |
+| YouTube livestream               | REQ-13                        | UI only     | Admin configuration and guest playback under the confirmed access rules.                                                                                                                                                                                                                     |
 
 ## Infrastructure and release work
 
@@ -111,7 +120,7 @@ must also follow the [architecture](Make-My-Marriage-System-Architecture.md),
 | Resend                       | Not started | Deferred with email verification; no current provider client or dependency. Domain, sender, delivery, and durable jobs remain.                                                                                                                                                                           |
 | Cloudflare R2                | Not started | Private storage, authorized transfers, image processing, and retention/deletion workflows.                                                                                                                                                                                                               |
 | Inngest                      | Not started | Job entry points, background processing, scheduled reminders, and retries.                                                                                                                                                                                                                               |
-| Feature and security testing | Partial     | Twenty-nine local regressions and onboarding/settings/event checks pass. Prior isolated Atlas lifecycle/HTTP security and browser auth/history checks are recorded. Other feature tests, production abuse controls, delivery, and capacity remain.                                                       |
+| Feature and security testing | Partial     | Thirty-four local regressions and ownership/membership/onboarding/settings/event checks pass. Prior isolated Atlas lifecycle/HTTP security and browser auth/history checks are recorded. Other feature tests, production abuse controls, delivery, and capacity remain.                                  |
 | Operations and deployment    | Not started | Environment separation, backups, observability, provider capacity checks, Vercel deployment, and release acceptance checks.                                                                                                                                                                              |
 
 ## Verification recorded so far
@@ -590,3 +599,79 @@ deployment changed. The prior P2 request-limit finding is resolved by the
 request-limit follow-up commit on dev. The user approved committing and pushing
 this tested fix; Git completion is confirmed in the commit/push report. No new
 browser or full authentication-suite run is claimed for this transport-only change.
+
+## Organizer access policy and desktop drafts — 14 October 2026
+
+Accepted invite-only staff signup everywhere for the next feature, preserving
+existing admins and keeping email verification deferred. Created desktop Members,
+Invite organizer, acceptance/signup and revoke-confirmation drafts in Stitch.
+Regenerated the Members preview after detecting clipped actions in the first export.
+Visual approval, state variants and implementation remain pending; see
+[design scope](organizer-invitations/DESIGN.md). Public admin signup still exists
+until the backend is changed and tested. No account access or runtime code changed.
+
+The user reported adding a Resend API key; it was not inspected or verified.
+Recorded commented RESEND_API_KEY/STAFF_EMAIL_FROM examples. onboarding@resend.dev
+is restricted to the Resend account email; domain setup for sending to other
+organizers is deferred. No email, DNS/provider setup, dependency install, database
+change, commit/push or deployment was performed. Documentation formatting/links
+and exported design previews are checked; no new application tests are claimed.
+
+## Independent wedding owners and invited members — 14 October 2026
+
+The user superseded the invitation-only-everywhere proposal: anyone can create their
+own wedding through public signup, with one wedding per account. Signup now stores
+ownerUserId and commits account/workspace together. Removed singleton constraints
+from feature reads/writes and safely adapted legacy validators/indexes. Existing
+memberships/admins remain; no legacy owner is guessed. Older PRD/architecture
+versions remain unchanged because their referenced newer files were not found.
+
+Implemented desktop Members and Invite member, Co-owner/Organizer selection,
+recipient-bound single-use 48-hour acceptance, pending cancellation and organizer
+revocation/session invalidation. Invitation reservations prevent public signup from
+bypassing wedding scope. Co-owners have admin permissions; owner/admin revocation,
+transfers and multi-wedding memberships remain deferred. See
+[feature behavior and delivery limits](organizer-invitations/Implementation.md).
+
+Added server-only Resend REST sending with stable invitation/provider retry identity,
+manual failure recovery and no claim of delivery. No SDK or dependency upgrades were
+needed. Registry metadata confirmed installed next-auth 4.24.15 remains stable (v5
+is beta), with compatible Next/React peer ranges and the existing JWT session strategy.
+33 local regressions, lint, formatting, TypeScript and Webpack build passed. Isolated
+ownership service checks passed concurrent signup/no orphan wedding, distinct owners,
+legacy singleton validator/index migration, unrelated validator preservation and
+session invalidation. The first HTTP run exposed a concurrent invitation retry race;
+it was fixed. A later run reached failure/retry handling and exposed an incorrect test
+expectation for a deliberately repeated mock provider rejection; the fixture expectation
+was corrected. The focused Members HTTP checks passed before interruption; the interrupted
+fixture was removed on resumption. See the 15 October follow-up for desktop and
+final verification.
+No real emails, real application data changes, dependency installs, provisioning,
+commit/push or deployment have been performed.
+
+## Members desktop and final safeguards — 15 October 2026
+
+Completed the desktop journey on the production build with fictional owner, co-owner
+and organizer records. Checked required-email focus, both role explanations, controlled
+send failure with retained values, stable retry returning to Members, keep/confirm
+cancellation and revocation, signed-in invitation handling, required/confirmation
+errors, password visibility, successful acceptance and token removal from the URL.
+The co-owner signed in directly to the existing completed wedding and could open
+Members with Owner/Co-owner labels. Saved refresh/persistence checks confirmed one
+wedding, unchanged owner, an active admin co-owner without emailVerifiedAt, removed
+cancelled placeholders and a revoked organizer with incremented sessionVersion.
+Logged-out Back/direct Members/dashboard requests returned to login. Desktop at
+1280px had no horizontal overflow; the final acceptance tab logged no warnings/errors.
+Mobile/cross-browser/a full accessibility audit and real email delivery are untested.
+
+Invitation forms now use POST and remain disabled until hydration; a rendering
+regression guards against native GET submission of passwords. The send limiter now
+also applies to replayed form submissions before contacting Resend. A controlled
+service regression for replay-limit enforcement and the final full HTTP suite
+both passed. Earlier full-suite checks reached the final outage scenario before a
+fixture-port collision; separate ports now prevent that collision. A fresh server of the completed build was used for the final desktop checks.
+34 local regressions, lint, formatting, TypeScript and the final Webpack build pass.
+An independent read-only check confirmed all nine disposable databases empty
+(14 October own01/mem01–03; 15 October full01–02/mb01–02/own02). All test servers
+were stopped and the temporary synthetic invitation link file was removed. No real application records, local service
+credentials, dependencies, external email, Git commits/pushes or deployments changed.

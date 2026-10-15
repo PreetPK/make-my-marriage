@@ -13,7 +13,13 @@ export async function runOnboardingChecks({
 }) {
   const path = "/api/wedding/onboarding";
   const collection = db.collection("weddings");
-  const initial = await collection.findOne({ singletonKey: "primary" });
+  const initial = await collection.findOne({
+    ownerUserId: (
+      await db
+        .collection("users")
+        .findOne({ emailNormalized: "http-admin@example.invalid" })
+    )._id,
+  });
   const couple = {
     brideName: "Asha",
     groomName: "Dev",
@@ -100,6 +106,14 @@ export async function runOnboardingChecks({
     ).status,
     201,
   );
+  // A second public signup owns a different wedding. Use a fixture co-owner
+  // membership explicitly for the existing shared-edit concurrency scenario.
+  await db
+    .collection("users")
+    .updateOne(
+      { emailNormalized: email },
+      { $set: { weddingId: initial._id } },
+    );
   const otherJar = new BrowserCookies();
   assert.equal((await login(otherJar, email)).status, 200);
   const outcomes = await Promise.all([
@@ -217,7 +231,7 @@ export async function runOnboardingChecks({
   assert(record.onboarding.completedAt instanceof Date);
   assert.equal(record.website?.published, undefined);
   assert.equal(record.publishedAt, undefined);
-  assert.equal(await collection.countDocuments(), 1);
+  assert.equal(await collection.countDocuments(), 2);
   assert.equal((await write(finish)).status, 409);
   assert.equal(
     (await collection.findOne({ _id: initial._id })).revision,

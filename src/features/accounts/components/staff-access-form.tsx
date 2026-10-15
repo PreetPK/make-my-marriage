@@ -154,7 +154,7 @@ export function StaffAccessForm({
         </h2>
         <p className="mt-2 text-[13px] leading-5 text-muted">
           {signup
-            ? "Anyone can sign up. Every new account receives admin access."
+            ? "Create your own wedding workspace. Joining another wedding? Use your invitation link."
             : "Sign in to your wedding workspace."}
         </p>
         <p className="my-6 rounded-sm bg-panel px-4 py-3 text-xs leading-5 text-secondary">

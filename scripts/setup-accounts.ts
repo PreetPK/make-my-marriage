@@ -3,7 +3,7 @@ import { closeDatabaseConnection } from "../src/server/db/mongodb";
 ensureAccountStorage()
   .then(() =>
     console.log(
-      "Account indexes and validator initialized for public admin signup. No accounts or emails were created.",
+      "Account and wedding indexes/validators initialized for independent wedding signup. No accounts or emails were created.",
     ),
   )
   .catch(() => {

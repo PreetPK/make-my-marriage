@@ -34,48 +34,62 @@ export async function signupAdmin(input: unknown) {
   const { database, users } = await accountCollections();
   if (await users.findOne({ emailNormalized }))
     throw new AccountInputError(
-      "An account already exists for this email. Sign in to your account.",
+      "An account or invitation already exists for this email. Sign in or use your invitation.",
     );
   const passwordHash = await hashPassword(password);
-  // Reserve only the singleton's setup identity. Wedding names, timezone and
-  // currency are configured later, never inferred from the sample homepage.
-  const now = new Date();
-  const wedding = await database.collection("weddings").findOneAndUpdate(
-    { singletonKey: "primary" },
-    {
-      $setOnInsert: {
-        singletonKey: "primary",
-        status: "setup",
-        createdAt: now,
-        updatedAt: now,
-        schemaVersion: 1,
-        revision: 1,
-      },
-    },
-    { upsert: true, returnDocument: "after" },
-  );
-  if (!wedding || !["setup", "active"].includes(wedding.status))
-    throw new AccountInputError("This wedding workspace is unavailable.");
+  // Account and owned workspace are committed together. Duplicate signup never
+  // leaves an orphan wedding or joins someone else's existing workspace.
+  const now = new Date(),
+    userId = new ObjectId(),
+    weddingId = new ObjectId();
+  const session = database.client.startSession();
   try {
-    await users.insertOne({
-      _id: new ObjectId(),
-      weddingId: wedding._id,
-      name,
-      email,
-      emailNormalized,
-      role: "admin",
-      status: "active",
-      credential: { passwordHash, changedAt: now },
-      sessionVersion: 1,
-      createdAt: now,
-      updatedAt: now,
-    });
+    await session.withTransaction(
+      async () => {
+        await database.collection("weddings").insertOne(
+          {
+            _id: weddingId,
+            ownerUserId: userId,
+            status: "setup",
+            createdAt: now,
+            updatedAt: now,
+            schemaVersion: 1,
+            revision: 1,
+          },
+          { session },
+        );
+        await users.insertOne(
+          {
+            _id: userId,
+            weddingId,
+            name,
+            email,
+            emailNormalized,
+            role: "admin",
+            status: "active",
+            credential: { passwordHash, changedAt: now },
+            sessionVersion: 1,
+            createdAt: now,
+            updatedAt: now,
+          },
+          { session },
+        );
+      },
+      {
+        readConcern: { level: "snapshot" },
+        writeConcern: { w: "majority" },
+        timeoutMS: 30000,
+        maxCommitTimeMS: 10000,
+      },
+    );
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === 11000)
       throw new AccountInputError(
-        "An account already exists for this email. Sign in to your account.",
+        "An account or invitation already exists for this email. Sign in or use your invitation.",
       );
     throw error;
+  } finally {
+    await session.endSession();
   }
   return { message: "Account created. You can now sign in." };
 }

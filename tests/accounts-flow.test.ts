@@ -12,15 +12,19 @@ import { authOptions } from "../src/server/auth/config";
 test("public signup and immediate login work without email configuration; revoked accounts stay blocked", async () => {
   const savedEnvironment = { ...process.env };
   const users: StaffUser[] = [];
-  const wedding = {
-    _id: new ObjectId(),
-    singletonKey: "primary",
-    status: "setup",
-  };
+  const weddings: { _id: ObjectId; ownerUserId: ObjectId; status: string }[] =
+    [];
   const counts = new Map<string, number>();
   const fakeDb = {
     listCollections: () => ({ next: async () => null }),
     createCollection: async () => undefined,
+    command: async () => undefined,
+    client: {
+      startSession: () => ({
+        withTransaction: async (work: () => Promise<void>) => work(),
+        endSession: async () => undefined,
+      }),
+    },
     collection(name: string) {
       assert(
         ["users", "weddings", "authRateLimits"].includes(name),
@@ -30,7 +34,12 @@ test("public signup and immediate login work without email configuration; revoke
         createIndex: async () => "test-index",
         listIndexes: () => ({ toArray: async () => [] }),
         async findOne(filter: Record<string, unknown>) {
-          if (name === "weddings") return wedding;
+          if (name === "weddings")
+            return (
+              weddings.find((wedding) =>
+                wedding._id.equals(filter._id as ObjectId),
+              ) ?? null
+            );
           return (
             users.find((user) => {
               if (filter.emailNormalized)
@@ -45,6 +54,10 @@ test("public signup and immediate login work without email configuration; revoke
           );
         },
         async insertOne(user: StaffUser) {
+          if (name === "weddings") {
+            weddings.push(user as unknown as (typeof weddings)[number]);
+            return;
+          }
           assert(
             !users.some(
               (existing) => existing.emailNormalized === user.emailNormalized,
@@ -53,7 +66,6 @@ test("public signup and immediate login work without email configuration; revoke
           users.push(user);
         },
         async findOneAndUpdate(filter: { _id: string }) {
-          if (name === "weddings") return wedding;
           const count = (counts.get(filter._id) ?? 0) + 1;
           counts.set(filter._id, count);
           return { count };
@@ -101,11 +113,17 @@ test("public signup and immediate login work without email configuration; revoke
       assert.equal(user.role, "admin");
       assert.equal(user.status, "active");
       assert.equal(user.emailVerifiedAt, undefined);
-      assert(user.weddingId.equals(wedding._id));
+      const wedding = weddings.find((row) => row._id.equals(user.weddingId));
+      assert(wedding);
+      assert(wedding.ownerUserId.equals(user._id));
       assert(
         await findActiveStaff(user._id.toHexString(), user.sessionVersion),
       );
     }
+    assert.equal(
+      new Set(users.map((user) => user.weddingId.toHexString())).size,
+      3,
+    );
     await assert.rejects(
       signupAdmin({ ...values, email: values.email.toUpperCase() }),
       /already exists/,
